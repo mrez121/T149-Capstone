@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "node lib/seed.js"
+    "seed": "node lib/seed.js",
+    "setup": "node setup.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
