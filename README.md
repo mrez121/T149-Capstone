@@ -3,50 +3,52 @@
 Constraint-based student team formation system.
 IFB398 Capstone · QUT Technology For Teaching · Team 149
 
-## Stack
-- Next.js 14 · MySQL 8 · bcryptjs · jsonwebtoken
+## Requirements
+- Node.js (download from nodejs.org)
+- MySQL 8 (download from dev.mysql.com/downloads/mysql)
+  - Username: root
+  - Password: rootpassword
+  - Port: 3306
 
 ## Setup
-```bash
-npm install
-npm run seed
-npm run dev
-```
-Open: http://localhost:3000
+1. Clone the repo
+   git clone https://github.com/mrez121/T149-Capstone.git
+   cd T149-Capstone
 
-## How grouping works
+2. Install dependencies
+   npm install
 
+3. Create database and seed students
+   npm run seed
+
+4. Run the app
+   npm run dev
+
+5. Open browser at http://localhost:3000
+
+## Demo login accounts
+Password for all: password123
+
+n10000001 - Alice Chen      (Returning)
+n10000002 - Ben Nguyen      (Returning)
+n10000003 - Clara Smith     (Returning)
+n10000004 - Daniel Park     (NEW)
+n10000005 - Eva Martinez    (NEW)
+n10000006 - Frank Li        (Returning)
+n10000007 - Grace Kim       (Returning)
+n10000008 - Henry Wilson    (NEW)
+n10000009 - Isabella Jones  (Returning)
+n10000010 - James Brown     (Returning)
+
+## Constraints enforced
+1. Team size: 4-5 members
+2. Max 2 new QUT students per group
+3. All members must share at least 1 tutorial slot
+
+## How it works
 1. Students discuss and agree on a group outside the system
 2. One student creates a group (Public or Private)
-3. Creator invites teammates by entering their student ID
-4. Invited students see a pending invite on their dashboard — accept or decline
-5. As members join, the constraint status panel updates live
-6. Once all 3 constraints are green, the creator locks the group
-
-## Constraints
-- 4–5 members per group
-- Max 2 new QUT students per group
-- All members must share at least 1 tutorial slot
-
-## Public vs Private
-- Public: visible in the group browser — any student can request to join
-- Private: invite only — creator must invite each student by ID
-
-## Demo accounts — password: password123
-n10000001 Alice Chen      (Returning)
-n10000002 Ben Nguyen      (Returning)
-n10000003 Clara Smith     (Returning)
-n10000004 Daniel Park     (NEW)
-n10000005 Eva Martinez    (NEW)
-n10000006 Frank Li        (Returning)
-n10000007 Grace Kim       (Returning)
-n10000008 Henry Wilson    (NEW)
-n10000009 Isabella Jones  (Returning)
-n10000010 James Brown     (Returning)
-
-## Database (.env.local)
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=rootpassword
-MYSQL_DATABASE=teamup
+3. Creator invites teammates by their student ID
+4. Invited students accept or decline from their dashboard
+5. Constraint panel updates live as members join
+6. Creator locks the group once all constraints are green
