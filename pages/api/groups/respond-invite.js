@@ -1,6 +1,7 @@
 // pages/api/groups/respond-invite.js
 import { getDb }       from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
+import { findSharedSlots, getGroupMembers, validateJoin } from '../../../lib/constraints';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
@@ -23,7 +24,8 @@ export default async function handler(req, res) {
   }
 
   if (action === 'accept') {
-    // Check not already in a group
+    const groupId = invRows[0].group_id;
+
     const [existing] = await db.query(
       'SELECT group_id FROM group_members WHERE student_id = ?',
       [student.studentId]
@@ -32,37 +34,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'You are already in a group.' });
     }
 
-    // Check group not locked and not full
-    const [grpRows] = await db.query(
-      'SELECT * FROM `groups` WHERE group_id = ?', [invRows[0].group_id]
-    );
-    if (grpRows[0].status === 'locked') {
-      return res.status(400).json({ error: 'This group is now locked.' });
-    }
-    const [countRows] = await db.query(
-      'SELECT COUNT(*) as c FROM group_members WHERE group_id = ?',
-      [invRows[0].group_id]
-    );
-    if (countRows[0].c >= 5) {
-      return res.status(400).json({ error: 'Group is full — maximum 5 members.' });
-    }
+    const { ok, errors } = await validateJoin(groupId, student.studentId);
+    if (!ok) return res.status(400).json({ ok: false, errors });
 
-    // Add to group — no constraint check, constraints only matter on lock
     await db.query(
       'INSERT INTO group_members (group_id, student_id) VALUES (?, ?)',
-      [invRows[0].group_id, student.studentId]
+      [groupId, student.studentId]
     );
-    // Recalculate shared slot after member joins
-    const { findSharedSlots, getGroupMembers } = await import('../../../lib/constraints.js');
-    const updatedMembers = await getGroupMembers(invRows[0].group_id);
-    const memberIds = updatedMembers.map(m => m.student_id);
-    const shared = await findSharedSlots(memberIds);
-    if (shared.size > 0) {
-      await db.query(
-        'UPDATE `groups` SET shared_slot = ? WHERE group_id = ?',
-        [[...shared].sort()[0], invRows[0].group_id]
-      );
-    }
+
+    const updatedMembers = await getGroupMembers(groupId);
+    const shared = await findSharedSlots(updatedMembers.map(m => m.student_id));
+    await db.query(
+      'UPDATE `groups` SET shared_slot = ? WHERE group_id = ?',
+      [shared.size > 0 ? [...shared].sort()[0] : null, groupId]
+    );
+
     await db.query('UPDATE invites SET status = "accepted" WHERE id = ?', [inviteId]);
     return res.status(200).json({ ok: true });
   }

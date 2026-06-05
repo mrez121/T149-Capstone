@@ -59,11 +59,26 @@ export default async function handler(req, res) {
   const { ok, errors } = await validateJoin(groupId, target);
   if (!ok) return res.status(400).json({ ok: false, errors });
 
-  // Send invite (ignore duplicate)
-  await db.query(
-    'INSERT IGNORE INTO invites (group_id, from_student_id, to_student_id, status) VALUES (?, ?, ?, "pending")',
-    [groupId, student.studentId, target]
+  const [existingInviteRows] = await db.query(
+    'SELECT * FROM invites WHERE group_id = ? AND to_student_id = ?',
+    [groupId, target]
   );
+  const existingInvite = existingInviteRows[0];
+  if (existingInvite?.status === 'pending') {
+    return res.status(400).json({ error: `An invite is already pending for ${targetRows[0].name}.` });
+  }
+
+  if (existingInvite) {
+    await db.query(
+      'UPDATE invites SET from_student_id = ?, status = "pending", created_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [student.studentId, existingInvite.id]
+    );
+  } else {
+    await db.query(
+      'INSERT INTO invites (group_id, from_student_id, to_student_id, status) VALUES (?, ?, ?, "pending")',
+      [groupId, student.studentId, target]
+    );
+  }
 
   return res.status(200).json({ ok: true, message: `Invite sent to ${targetRows[0].name}` });
 }
