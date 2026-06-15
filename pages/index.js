@@ -30,14 +30,14 @@ export default function LoginPage() {
       <Head><title>TeamUp — Login</title></Head>
       <div className="wrap">
         <div className="card">
-          <div className="logo">Team<span>Up</span></div>
+          <div className="logo logo--large">Team<span>Up</span></div>
           <p className="tagline">Student Team Formation · QUT IFB398</p>
           <form onSubmit={handleLogin}>
             {error && <div className="err">{error}</div>}
             <label>Student ID</label>
-            <input type="text" placeholder="e.g. n10000001" value={studentId} onChange={e => setStudentId(e.target.value)} required autoFocus />
+            <input  className="text-input" type="text" placeholder="e.g. n10000001" value={studentId} onChange={e => setStudentId(e.target.value)} required autoFocus />
             <label>Password</label>
-            <input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+            <input  className="text-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
             <button className="btn-login" type="submit" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -50,23 +50,20 @@ export default function LoginPage() {
           <p className="sso">🔒 QUT SSO integration planned for Phase 2</p>
         </div>
         <style jsx>{`
-          * { box-sizing:border-box; margin:0; padding:0; }
-          :global(body) { font-family:-apple-system,sans-serif; }
-          .wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#0D1117; background-image:radial-gradient(ellipse at 20% 50%,rgba(29,111,232,.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(0,201,167,.06) 0%,transparent 50%); }
-          .card { background:#161B22; border:1px solid #30363D; border-radius:16px; padding:48px 44px; width:100%; max-width:420px; }
-          .logo { font-size:32px; font-weight:700; color:#E6EDF3; margin-bottom:6px; letter-spacing:-1px; }
-          .logo span { color:#00C9A7; }
-          .tagline { font-size:14px; color:#8B949E; margin-bottom:32px; }
-          label { display:block; font-size:12px; font-weight:600; color:#8B949E; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
-          input { width:100%; background:#0D1117; border:1px solid #30363D; border-radius:8px; padding:12px 14px; font-size:15px; color:#E6EDF3; margin-bottom:18px; outline:none; transition:border-color .2s; box-sizing:border-box; }
-          input:focus { border-color:#1D6FE8; }
-          .btn-login { width:100%; background:#1D6FE8; color:white; border:none; border-radius:8px; padding:14px; font-size:15px; font-weight:600; cursor:pointer; transition:background .2s; margin-top:4px; }
-          .btn-login:hover:not(:disabled) { background:#1353B0; }
+          
+          .wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background: var(--std-background); background-image:radial-gradient(ellipse at 20% 50%,rgba(29,111,232,.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(0,201,167,.06) 0%,transparent 50%); }
+          .card { background:var(--card-background); border:1px solid var(--gray-dark-A); border-radius:16px; padding:48px 44px; width:100%; max-width:420px; }
+
+          .tagline { font-size:14px; color: var(--gray-mid-A); margin-bottom:32px; }
+          label { display:block; font-size:12px; font-weight:600; color: var(--gray-mid-A); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+          input { width:100%; background: var(--std-background); border:1px solid var(--gray-dark-A); border-radius:8px; padding:12px 14px; font-size:15px; color: var(--gray-light-A); margin-bottom:18px; outline:none; transition:border-color .2s; box-sizing:border-box; }
+          .btn-login { width:100%; background: var(--blue); color:white; border:none; border-radius:8px; padding:14px; font-size:15px; font-weight:600; cursor:pointer; transition:background .2s; margin-top:4px; }
+          .btn-login:hover:not(:disabled) { background: var(--blue-variant); }
           .btn-login:disabled { opacity:.6; cursor:not-allowed; }
-          .err { background:rgba(248,81,73,.12); border:1px solid rgba(248,81,73,.3); border-radius:8px; padding:12px 14px; font-size:14px; color:#F85149; margin-bottom:18px; }
-          .hint { margin-top:24px; padding-top:20px; border-top:1px solid #30363D; font-size:13px; color:#8B949E; line-height:1.7; }
-          .hint strong { color:#E6EDF3; }
-          .sso { margin-top:16px; font-size:12px; color:#8B949E; text-align:center; opacity:.7; }
+          .err { background: lch(from var(--red) l c h /.12); border:1px solid lch(from var(--red) l c h /.3); border-radius:8px; padding:12px 14px; font-size:14px; color: var(--red); margin-bottom:18px; }
+          .hint { margin-top:24px; padding-top:20px; border-top:1px solid var(--gray-dark-A); font-size:13px; color:var(--gray-mid-A); line-height:1.7; }
+          .hint strong { color: var(--gray-light-A); }
+          .sso { margin-top:16px; font-size:12px; color: var(--gray-mid-A); text-align:center; opacity:.7; }
         `}</style>
       </div>
     </>
