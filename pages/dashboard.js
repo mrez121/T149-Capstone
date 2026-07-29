@@ -55,6 +55,8 @@ export default function Dashboard() {
   const newOk = newCount <= 2;
   const slotOk = !!myGroup?.shared_slot;
   const allOk = sizeOk && newOk && slotOk;
+  const seatsNeeded = Math.max(0, 4 - memberCount);
+  const openSeats = Math.max(0, 5 - memberCount);
 
   const isCreator =
     myGroup &&
@@ -428,135 +430,277 @@ export default function Dashboard() {
             </div>
 
             {myGroup ? (
-              <>
-                <div className="group-header-row">
-                  <div>
-                    <div className="group-name">
-                      {myGroup.name}
+              <div className="active-group-layout">
+                <div className="active-group-main">
+                  <div className="active-group-hero">
+                    <div>
+                      <div className="group-kicker">
+                        Current team
+                      </div>
+
+                      <div className="group-name active-group-name">
+                        {myGroup.name}
+                      </div>
+
+                      <div className="group-meta active-group-meta">
+                        <span>{myGroup.group_id}</span>
+
+                        <span
+                          className={`badge ${
+                            myGroup.status === 'locked'
+                              ? 'badge-red'
+                              : 'badge-blue'
+                          }`}
+                        >
+                          {myGroup.status}
+                        </span>
+
+                        <span>
+                          {myGroup.type === 'private'
+                            ? '🔒 Private'
+                            : '🌐 Public'}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="group-meta">
-                      {myGroup.group_id}
-                      &nbsp;·&nbsp;
+                    <div
+                      className={`group-health-pill ${
+                        allOk ? 'ready' : 'needs-work'
+                      }`}
+                    >
+                      <strong>
+                        {allOk ? 'Ready to lock' : 'Building team'}
+                      </strong>
 
-                      <span
-                        className={`badge ${
-                          myGroup.status === 'locked'
-                            ? 'badge-red'
-                            : 'badge-blue'
-                        }`}
-                      >
-                        {myGroup.status}
+                      <span>
+                        {seatsNeeded > 0
+                          ? `${seatsNeeded} more needed`
+                          : `${openSeats} open seat${
+                              openSeats === 1 ? '' : 's'
+                            }`}
                       </span>
-
-                      &nbsp;·&nbsp;
-                      {myGroup.type === 'private'
-                        ? '🔒 Private'
-                        : '🌐 Public'}
                     </div>
+                  </div>
+
+                  <div className="group-progress-grid">
+                    <div
+                      className={`group-metric ${
+                        sizeOk ? 'metric-ok' : 'metric-warn'
+                      }`}
+                    >
+                      <span>Team size</span>
+                      <strong>{memberCount}/5</strong>
+                    </div>
+
+                    <div
+                      className={`group-metric ${
+                        newOk ? 'metric-ok' : 'metric-warn'
+                      }`}
+                    >
+                      <span>New students</span>
+                      <strong>{newCount}/2</strong>
+                    </div>
+
+                    <div
+                      className={`group-metric ${
+                        slotOk ? 'metric-ok' : 'metric-warn'
+                      }`}
+                    >
+                      <span>Shared slot</span>
+                      <strong>
+                        {myGroup.shared_slot || 'Missing'}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="active-members-heading">
+                    <div>
+                      <div className="section-label members-label">
+                        Team seats
+                      </div>
+
+                      <p>
+                        {memberCount} member{memberCount === 1 ? '' : 's'}
+                        joined, {openSeats} seat
+                        {openSeats === 1 ? '' : 's'} still open.
+                      </p>
+                    </div>
+
+                    <span className="group-seat-count">
+                      {memberCount}/5 filled
+                    </span>
+                  </div>
+
+                  <div className="members-grid active-members-grid">
+                    {myMembers.map((member) => (
+                      <div
+                        key={member.student_id}
+                        className="member-card active-member-card"
+                      >
+                        <div className="avatar">
+                          {member.name[0]}
+                        </div>
+
+                        <div className="member-info">
+                          <div className="member-name">
+                            {member.name}
+                          </div>
+
+                          <div className="member-id">
+                            {member.student_id}
+                          </div>
+                        </div>
+
+                        <span
+                          className={`badge ${
+                            member.is_new
+                              ? 'badge-amber'
+                              : 'badge-green'
+                          }`}
+                        >
+                          {member.is_new ? 'New' : 'Returning'}
+                        </span>
+                      </div>
+                    ))}
+
+                    {Array.from({ length: openSeats }).map(
+                      (_, index) => (
+                        <div
+                          key={`open-seat-${index}`}
+                          className="member-card active-member-card empty-seat-card"
+                        >
+                          <div className="avatar empty-seat-avatar">
+                            +
+                          </div>
+
+                          <div className="member-info">
+                            <div className="member-name">
+                              Open seat
+                            </div>
+
+                            <div className="member-id">
+                              Invite or browse students
+                            </div>
+                          </div>
+
+                          <span className="badge badge-blue">
+                            Slot {memberCount + index + 1}
+                          </span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
 
-                {/* Members grid */}
-                <div className="members-grid">
-                  {myMembers.map((member) => (
-                    <div
-                      key={member.student_id}
-                      className="member-card"
-                    >
-                      <div className="avatar">
-                        {member.name[0]}
-                      </div>
+                <aside className="active-group-side">
+                  <div className="group-action-panel">
+                    <div className="section-label">
+                      Group actions
+                    </div>
 
-                      <div className="member-info">
-                        <div className="member-name">
-                          {member.name}
-                        </div>
-
-                        <div className="member-id">
-                          {member.student_id}
-                        </div>
-                      </div>
-
-                      <span
-                        className={`badge ${
-                          member.is_new
-                            ? 'badge-amber'
-                            : 'badge-green'
+                    <div className="formation-checklist">
+                      <div
+                        className={`formation-check ${
+                          sizeOk ? 'complete' : 'attention'
                         }`}
                       >
-                        {member.is_new
-                          ? 'New'
-                          : 'Returning'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Invite student */}
-                {isCreator &&
-                  myGroup.status === 'forming' && (
-                    <div className="invite-section">
-                      <div className="section-label">
-                        Invite a student to this group
+                        <span>Team size</span>
+                        <strong>{memberCount}/4 minimum</strong>
                       </div>
 
-                      <p
-                        style={{
-                          fontSize: 13,
-                          color: '#8B949E',
-                          marginBottom: 10,
-                        }}
+                      <div
+                        className={`formation-check ${
+                          newOk ? 'complete' : 'attention'
+                        }`}
                       >
-                        Enter their student ID — they will
-                        receive a notification to accept or
-                        decline.
-                      </p>
+                        <span>New-student limit</span>
+                        <strong>{newCount}/2 used</strong>
+                      </div>
 
-                      <form
-                        onSubmit={handleInviteStudent}
-                        className="inline-form"
+                      <div
+                        className={`formation-check ${
+                          slotOk ? 'complete' : 'attention'
+                        }`}
                       >
-                        <input
-                          className="text-input"
-                          placeholder="Student ID e.g. n10000003"
-                          value={inviteTarget}
-                          onChange={(e) =>
-                            setInviteTarget(e.target.value)
-                          }
-                          required
-                        />
-
-                        <button
-                          className="btn btn-blue"
-                          type="submit"
-                        >
-                          Send Invite
-                        </button>
-                      </form>
+                        <span>Shared tutorial</span>
+                        <strong>
+                          {myGroup.shared_slot || 'Not matched'}
+                        </strong>
+                      </div>
                     </div>
-                  )}
 
-                {myGroup.status === 'forming' && (
-                  <div className="btn-row">
-                    {isCreator && allOk && (
-                      <button
-                        className="btn btn-teal"
-                        onClick={handleLock}
-                      >
-                        🔒 Lock group
-                      </button>
+                    {isCreator &&
+                    myGroup.status === 'forming' ? (
+                      <>
+                        <p className="action-help">
+                          Invite classmates by student ID, or browse
+                          the directory to find available teammates.
+                        </p>
+
+                        <form
+                          onSubmit={handleInviteStudent}
+                          className="invite-section active-invite-section"
+                        >
+                          <input
+                            className="text-input"
+                            placeholder="Student ID e.g. n10000003"
+                            value={inviteTarget}
+                            onChange={(e) =>
+                              setInviteTarget(e.target.value)
+                            }
+                            required
+                          />
+
+                          <button
+                            className="btn btn-blue"
+                            type="submit"
+                          >
+                            Send invite
+                          </button>
+                        </form>
+                      </>
+                    ) : (
+                      <p className="action-help">
+                        {myGroup.status === 'locked'
+                          ? 'This group is locked and confirmed.'
+                          : 'Only the group creator can send invitations.'}
+                      </p>
                     )}
 
-                    <button
-                      className="btn btn-red"
-                      onClick={handleLeave}
-                    >
-                      Leave group
-                    </button>
+                    <div className="active-action-row">
+                      <button
+                        className="btn btn-teal"
+                        type="button"
+                        onClick={() => router.push('/students')}
+                      >
+                        Browse students
+                      </button>
+
+                      {myGroup.status === 'forming' && (
+                        <>
+                          {isCreator && allOk && (
+                            <button
+                              className="btn btn-blue"
+                              type="button"
+                              onClick={handleLock}
+                            >
+                              Lock group
+                            </button>
+                          )}
+
+                          <button
+                            className="btn btn-red"
+                            type="button"
+                            onClick={handleLeave}
+                          >
+                            Leave group
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-              </>
+                </aside>
+              </div>
             ) : (
               <div className="empty-group-layout">
                 <div className="empty-group-copy">
