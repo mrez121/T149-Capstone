@@ -5,7 +5,7 @@ import Head          from 'next/head';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [userId, setuserId] = useState('');
+  const [userId,    setuserId]    = useState('');
   const [password,  setPassword]  = useState('');
   const [error,     setError]     = useState('');
   const [loading,   setLoading]   = useState(false);
@@ -21,8 +21,17 @@ export default function LoginPage() {
     });
     const data = await res.json();
     setLoading(false);
-    if (res.ok) { router.push('/dashboard'); }
-    else        { setError(data.error || 'Login failed.'); }
+    //Determine next page based on payload from login fetch data
+    //Confirmed that this logic will move to the correct page if res.status in api/auth/login.js returns the payload as either student or tutor.
+    if (res.ok && data.student) {
+      router.push('/dashboard');
+    }
+    else if (res.ok && data.tutor) {
+      router.push('/tutor_dash');
+    }
+    else {
+      setError(data.error || 'Login failed.');
+    }
   }
 
   return (

@@ -11,6 +11,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Student ID and password are required.' });
   }
 
+  /*Need to figure out how to query both tables and determine if the user is a student or tutor
+  without breaking functionality. Previous commits (before reverts) broke data flow somewhere here.*/
   const db = getDb();
   const [rows] = await db.query(
     'SELECT * FROM students WHERE student_id = ?',
