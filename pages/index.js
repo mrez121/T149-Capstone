@@ -5,7 +5,7 @@ import Head          from 'next/head';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [studentId, setStudentId] = useState('');
+  const [userId, setuserId] = useState('');
   const [password,  setPassword]  = useState('');
   const [error,     setError]     = useState('');
   const [loading,   setLoading]   = useState(false);
@@ -17,7 +17,7 @@ export default function LoginPage() {
     const res  = await fetch('/api/auth/login', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ studentId, password }),
+      body:    JSON.stringify({ userId, password }),
     });
     const data = await res.json();
     setLoading(false);
@@ -35,7 +35,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             {error && <div className="err">{error}</div>}
             <label>Student ID</label>
-            <input  className="text-input" type="text" placeholder="e.g. n10000001" value={studentId} onChange={e => setStudentId(e.target.value)} required autoFocus />
+            <input  className="text-input" type="text" placeholder="e.g. n10000001" value={userId} onChange={e => setuserId(e.target.value)} required autoFocus />
             <label>Password</label>
             <input  className="text-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
             <button className="btn-login" type="submit" disabled={loading}>
@@ -45,7 +45,8 @@ export default function LoginPage() {
           <div className="hint">
             <strong>Demo accounts</strong> — password: <strong>password123</strong><br />
             n10000001 · n10000002 · n10000003 · n10000004 · n10000005<br />
-            n10000006 · n10000007 · n10000008 · n10000009 · n10000010
+            n10000006 · n10000007 · n10000008 · n10000009 · n10000010<br />
+            Admins: bfarnsworth · wlu · mrezwani · hwang
           </div>
           <p className="sso">🔒 QUT SSO integration planned for Phase 2</p>
         </div>

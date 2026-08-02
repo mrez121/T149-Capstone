@@ -46,6 +46,11 @@ async function setup() {
   await conn.query(`CREATE TABLE IF NOT EXISTS group_members (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) NOT NULL, student_id VARCHAR(20) NOT NULL, joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_member (group_id, student_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id), FOREIGN KEY (student_id) REFERENCES students(student_id))`);
   await conn.query(`CREATE TABLE IF NOT EXISTS invites (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) NOT NULL, from_student_id VARCHAR(20) NOT NULL, to_student_id VARCHAR(20) NOT NULL, status ENUM('pending','accepted','declined') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_invite (group_id, to_student_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id), FOREIGN KEY (from_student_id) REFERENCES students(student_id), FOREIGN KEY (to_student_id) REFERENCES students(student_id))`);
 
+  //Admin related db creation
+  await conn.query(`CREATE TABLE IF NOT EXISTS teaching_team (id INT AUTO_INCREMENT PRIMARY KEY, tutor_id VARCHAR(20) UNIQUE NOT NULL, name VARCHAR(100) NOT NULL, email VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, position TINYINT DEFAULT 0)`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS tutor_classes(id INT AUTO_INCREMENT PRIMARY KEY, class_id VARCHAR(20) UNIQUE NOT NULL, room VARCHAR(20) NOT NULL, time VARCHAR(20) NOT NULL, tutor_id VARCHAR(20) NOT NULL, FOREIGN KEY (tutor_id) REFERENCES teaching_team(tutor_id))`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS groups_in_class(id INT AUTO_INCREMENT PRIMARY KEY, class_id VARCHAR(20) NOT NULL, group_id VARCHAR(20) NOT NULL, meeting_time VARCHAR(20) NOT NULL, FOREIGN KEY (class_id) REFERENCES tutor_classes(class_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id))`);
+
   const students = [
     { id: 'n10000001', name: 'Alice Chen',     email: 'alice.chen@student.qut.edu.au',     isNew: 0, cohort: '2023' },
     { id: 'n10000002', name: 'Ben Nguyen',     email: 'ben.nguyen@student.qut.edu.au',     isNew: 0, cohort: '2023' },
@@ -72,6 +77,14 @@ async function setup() {
     n10000010: ['MON-09:00', 'MON-11:00', 'WED-09:00', 'FRI-13:00'],
   };
 
+  //Tutors for teaching_team db
+  const tutors = [
+    {id: "bfarnsworth", name: "Brandon Farnsworth", email: "bf@qut.edu.au", position: 0},
+    {id: "wlu", name: "Weiyi Lu", email: "wl@qut.edu.au", position: 0},
+    {id: "mrezwani", name: "Medhi Rezwani", email: "mr@qut.edu.au", position: 0},
+    {id: "hwang", name: "Hongyun Wang", email: "hw@qut.edu.au", position: 0}
+  ]
+
   for (const s of students) {
     const hash = bcrypt.hashSync('password123', 10);
     await conn.query(`INSERT IGNORE INTO students (student_id, name, email, password, is_new, cohort) VALUES (?, ?, ?, ?, ?, ?)`, [s.id, s.name, s.email, hash, s.isNew, s.cohort]);
@@ -79,6 +92,14 @@ async function setup() {
     for (const slot of availability[s.id]) {
       await conn.query('INSERT INTO availability (student_id, slot) VALUES (?, ?)', [s.id, slot]);
     }
+  }
+
+  //Set passwords into teaching_team table
+  for(const t of tutors) {
+    const hash = bcrypt.hashSync("password123", 10);
+    await conn.query(`INSERT IGNORE INTO teaching_team (tutor_id, name, email, password, position) VALUES (?, ?, ?, ?, ?)`,
+      [t.id, t.name, t.email, hash, t.position]
+    );
   }
 
   console.log('✓ Database and tables created');

@@ -6,15 +6,15 @@ import { createToken, setTokenCookie } from '../../../lib/session';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { studentId, password } = req.body;
-  if (!studentId || !password) {
+  const { userId, password } = req.body;
+  if (!userId || !password) {
     return res.status(400).json({ error: 'Student ID and password are required.' });
   }
 
   const db = getDb();
   const [rows] = await db.query(
     'SELECT * FROM students WHERE student_id = ?',
-    [studentId.trim().toLowerCase()]
+    [userId.trim().toLowerCase()]
   );
 
   const student = rows[0];
