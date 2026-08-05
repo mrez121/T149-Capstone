@@ -6,8 +6,8 @@ import { createToken, setTokenCookie } from '../../../lib/session';
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { userId, password } = req.body;
-  if (!userId || !password) {
+  const { studentId, password } = req.body;
+  if (!studentId || !password) {
     return res.status(400).json({ error: 'Student ID and password are required.' });
   }
 
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const db = getDb();
   const [rows] = await db.query(
     'SELECT * FROM students WHERE student_id = ?',
-    [userId.trim().toLowerCase()]
+    [studentId.trim().toLowerCase()]
   );
 
   const student = rows[0];
@@ -30,6 +30,7 @@ export default async function handler(req, res) {
     email:     student.email,
     isNew:     student.is_new,
     cohort:    student.cohort,
+    isAdmin:   student.is_admin,
   };
 
   const token = createToken(payload);

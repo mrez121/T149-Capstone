@@ -5,7 +5,7 @@ import Head          from 'next/head';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [userId,    setuserId]    = useState('');
+  const [studentId, setStudentId] = useState('');
   const [password,  setPassword]  = useState('');
   const [error,     setError]     = useState('');
   const [loading,   setLoading]   = useState(false);
@@ -17,16 +17,16 @@ export default function LoginPage() {
     const res  = await fetch('/api/auth/login', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ userId, password }),
+      body:    JSON.stringify({ studentId, password }),
     });
     const data = await res.json();
     setLoading(false);
     //Determine next page based on payload from login fetch data
     //Confirmed that this logic will move to the correct page if res.status in api/auth/login.js returns the payload as either student or tutor.
-    if (res.ok && data.student) {
+    if (res.ok && data.student.isAdmin == 0) {
       router.push('/dashboard');
     }
-    else if (res.ok && data.tutor) {
+    else if (res.ok && data.student.isAdmin == 1) {
       router.push('/tutor_dash');
     }
     else {
@@ -44,7 +44,7 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             {error && <div className="err">{error}</div>}
             <label>Student ID</label>
-            <input  className="text-input" type="text" placeholder="e.g. n10000001" value={userId} onChange={e => setuserId(e.target.value)} required autoFocus />
+            <input  className="text-input" type="text" placeholder="e.g. n10000001" value={studentId} onChange={e => setStudentId(e.target.value)} required autoFocus />
             <label>Password</label>
             <input  className="text-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
             <button className="btn-login" type="submit" disabled={loading}>
