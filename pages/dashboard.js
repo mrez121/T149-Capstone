@@ -428,7 +428,7 @@ export default function Dashboard() {
             <div className="card-title purple">
               My Group
             </div>
-
+            
             {myGroup ? (
               <div className="active-group-layout">
                 <div className="active-group-main">
@@ -437,7 +437,7 @@ export default function Dashboard() {
                       <div className="group-kicker">
                         Current team
                       </div>
-
+                      
                       <div className="group-name active-group-name">
                         {myGroup.name}
                       </div>
@@ -720,9 +720,16 @@ export default function Dashboard() {
 
                     <p className="muted">
                       Create a group and invite your
-                      teammates, or browse public groups
-                      below.
+                      teammates. Find other students to form a group with,
+                      or browse public groups below.
                     </p>
+                    <button
+                        className="btn btn-teal"
+                        type="button"
+                        onClick={() => router.push('/students')}
+                      >
+                        Browse students
+                      </button>
                   </div>
                 </div>
 
