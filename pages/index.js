@@ -21,8 +21,17 @@ export default function LoginPage() {
     });
     const data = await res.json();
     setLoading(false);
-    if (res.ok) { router.push('/dashboard'); }
-    else        { setError(data.error || 'Login failed.'); }
+    //Determine next page based on payload from login fetch data
+    //Confirmed that this logic will move to the correct page if res.status in api/auth/login.js returns the payload as either student or tutor.
+    if (res.ok && data.student.isAdmin == 0) {
+      router.push('/dashboard');
+    }
+    else if (res.ok && data.student.isAdmin == 1) {
+      router.push('/tutor_dash');
+    }
+    else {
+      setError(data.error || 'Login failed.');
+    }
   }
 
   return (
@@ -45,7 +54,8 @@ export default function LoginPage() {
           <div className="hint">
             <strong>Demo accounts</strong> — password: <strong>password123</strong><br />
             n10000001 · n10000002 · n10000003 · n10000004 · n10000005<br />
-            n10000006 · n10000007 · n10000008 · n10000009 · n10000010
+            n10000006 · n10000007 · n10000008 · n10000009 · n10000010<br />
+            Admins: bfarnsworth · wlu · mrezwani · hwang
           </div>
           <p className="sso">🔒 QUT SSO integration planned for Phase 2</p>
         </div>
