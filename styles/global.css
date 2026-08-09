@@ -220,6 +220,7 @@ nav {
   border-radius: 12px;
 }
 
+/* Dashboard shortcut that gives students a clear path into the directory page. */
 .directory-entry-card {
   display: flex;
   align-items: center;
@@ -472,6 +473,7 @@ nav {
   border-radius: 10px;
 }
 
+/* Active group dashboard layout for students who have already joined a team. */
 .active-group-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
@@ -1080,6 +1082,7 @@ nav {
   border-color: var(--teal);
 }
 
+/* Student Directory page controls and result cards. */
 .directory-page {
   display: flex;
   flex-direction: column;
