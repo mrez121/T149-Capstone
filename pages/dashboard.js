@@ -252,6 +252,27 @@ export default function Dashboard() {
           Manage your availability, group and team requirements.
         </p>
 
+        <div className="directory-entry-card">
+          <div className="directory-entry-copy">
+            <div className="card-title teal">
+              Student Directory
+            </div>
+
+            <p>
+              Browse classmates, compare tutorial availability and
+              find potential teammates from one place.
+            </p>
+          </div>
+
+          <button
+            className="btn btn-blue directory-entry-btn"
+            type="button"
+            onClick={() => router.push('/students')}
+          >
+            Open directory
+          </button>
+        </div>
+
         {/* Pending invites */}
         {invites.length > 0 && (
           <div className="invites-banner">
