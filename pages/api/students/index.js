@@ -2,6 +2,7 @@
 import { getDb } from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 
+// Read-only endpoint for the Student Directory page.
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed.' });
@@ -12,12 +13,16 @@ export default async function handler(req, res) {
 
   const db = getDb();
 
+  // Return only public profile fields; password hashes and other private data
+  // must never be exposed to the directory UI.
   const [studentRows] = await db.query(`
     SELECT student_id, name, email, is_new, cohort
     FROM students
     ORDER BY name ASC
   `);
 
+  // Availability and group membership are loaded separately, then merged below.
+  // This keeps the SQL simple and gives the client one clean object per student.
   const [slotRows] = await db.query(`
     SELECT student_id, slot
     FROM availability
@@ -30,6 +35,7 @@ export default async function handler(req, res) {
     JOIN \`groups\` g ON g.group_id = gm.group_id
   `);
 
+  // Index availability by student ID so multiple slots can be attached to each profile.
   const slotsByStudent = new Map();
   for (const row of slotRows) {
     const slots = slotsByStudent.get(row.student_id) || [];
@@ -37,10 +43,12 @@ export default async function handler(req, res) {
     slotsByStudent.set(row.student_id, slots);
   }
 
+  // Each student can only belong to one active group in this prototype.
   const groupsByStudent = new Map(
     groupRows.map((row) => [row.student_id, row])
   );
 
+  // Shape the database rows into the normalized response used by the directory cards.
   const students = studentRows.map((row) => {
     const group = groupsByStudent.get(row.student_id);
 
@@ -62,6 +70,7 @@ export default async function handler(req, res) {
     };
   });
 
+  // Include the authenticated student so the client can label the current user.
   return res.status(200).json({
     student,
     students,

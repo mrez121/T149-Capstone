@@ -16,6 +16,8 @@ export default function Dashboard() {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Load the dashboard state from both personal group data and public groups.
+  // This keeps the grouped and ungrouped dashboard views in sync after each action.
   async function loadData() {
     const [mineRes, pubRes] = await Promise.all([
       fetch('/api/groups/mine'),
@@ -43,26 +45,31 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  // Reusable feedback helper for create, join, invite, lock and leave actions.
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4500);
   }
 
-  // Live constraint checks
+  // Live constraint checks used by both the status card and the active group panel.
   const memberCount = myMembers.length;
   const newCount = myMembers.filter((m) => m.is_new).length;
   const sizeOk = memberCount >= 4 && memberCount <= 5;
   const newOk = newCount <= 2;
   const slotOk = !!myGroup?.shared_slot;
   const allOk = sizeOk && newOk && slotOk;
+  // Separate minimum seats from total open seats so the UI can explain what is
+  // still required versus what capacity remains.
   const seatsNeeded = Math.max(0, 4 - memberCount);
   const openSeats = Math.max(0, 5 - memberCount);
 
+  // Only the group creator can send invitations or lock a forming group.
   const isCreator =
     myGroup &&
     student &&
     myGroup.created_by === student.studentId;
 
+  // Create a new group for students who are not currently in one.
   async function handleCreate(e) {
     e.preventDefault();
 
@@ -82,6 +89,7 @@ export default function Dashboard() {
     }
   }
 
+  // Join a public group directly from the available groups list.
   async function handleJoin(groupId) {
     const res = await fetch('/api/groups/join', {
       method: 'POST',
@@ -99,6 +107,7 @@ export default function Dashboard() {
     }
   }
 
+  // Invite a student by ID from the active group action panel.
   async function handleInviteStudent(e) {
     e.preventDefault();
 
@@ -121,6 +130,7 @@ export default function Dashboard() {
     }
   }
 
+  // Accept or decline an invitation shown in the pending invite banner.
   async function handleRespondInvite(inviteId, action) {
     const res = await fetch('/api/groups/respond-invite', {
       method: 'POST',
@@ -142,6 +152,7 @@ export default function Dashboard() {
     }
   }
 
+  // Lock a group once all team-size, new-student and shared-slot rules pass.
   async function handleLock() {
     const res = await fetch('/api/groups/lock', {
       method: 'POST',
@@ -159,6 +170,7 @@ export default function Dashboard() {
     }
   }
 
+  // Leave the current group after confirmation and then refresh dashboard data.
   async function handleLeave() {
     if (!confirm('Are you sure you want to leave this group?')) {
       return;
@@ -178,6 +190,7 @@ export default function Dashboard() {
     }
   }
 
+  // End the session and return the user to the login page.
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
@@ -251,6 +264,28 @@ export default function Dashboard() {
         <p className="page-subtitle">
           Manage your availability, group and team requirements.
         </p>
+
+        {/* Student Directory entry point for both grouped and ungrouped students. */}
+        <div className="directory-entry-card">
+          <div className="directory-entry-copy">
+            <div className="card-title teal">
+              Student Directory
+            </div>
+
+            <p>
+              Browse classmates, compare tutorial availability and
+              find potential teammates from one place.
+            </p>
+          </div>
+
+          <button
+            className="btn btn-blue directory-entry-btn"
+            type="button"
+            onClick={() => router.push('/students')}
+          >
+            Open directory
+          </button>
+        </div>
 
         {/* Pending invites */}
         {invites.length > 0 && (
@@ -430,6 +465,7 @@ export default function Dashboard() {
             </div>
             
             {myGroup ? (
+              /* Active group layout for students who have already joined or created a group. */
               <div className="active-group-layout">
                 <div className="active-group-main">
                   <div className="active-group-hero">
@@ -563,6 +599,7 @@ export default function Dashboard() {
                       </div>
                     ))}
 
+                    {/* Empty seat cards make the remaining group capacity visible at a glance. */}
                     {Array.from({ length: openSeats }).map(
                       (_, index) => (
                         <div
@@ -598,6 +635,7 @@ export default function Dashboard() {
                       Group actions
                     </div>
 
+                    {/* Repeat the key formation checks beside the actions so the next step is clear. */}
                     <div className="formation-checklist">
                       <div
                         className={`formation-check ${

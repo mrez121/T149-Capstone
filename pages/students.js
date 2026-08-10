@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
+// Keep the directory filter values and labels in one shared place so the
+// toolbar and filter logic stay consistent.
 const filterOptions = [
   { value: 'all', label: 'All students' },
   { value: 'available', label: 'Available' },
@@ -22,6 +24,8 @@ export default function StudentDirectory() {
   const [loading, setLoading] = useState(true);
   const [invitingId, setInvitingId] = useState(null);
 
+  // Load the current student, the full directory, and the user's group state.
+  // Both directory and group data are needed before invite buttons can be shown safely.
   async function loadData() {
     const [directoryRes, mineRes] = await Promise.all([
       fetch('/api/students'),
@@ -46,16 +50,24 @@ export default function StudentDirectory() {
     loadData();
   }, []);
 
+  // Show a short feedback message after invite actions or API errors.
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4500);
   }
 
+  // End the current session and return the user to the login page.
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
   }
 
+  // Open the profile page for the selected student.
+  function handleViewProfile(targetStudentId) {
+    router.push(`/students/${targetStudentId}`);
+  }
+
+  // Send an invite from the creator's current group to an available classmate.
   async function handleInvite(targetStudentId) {
     if (!myGroup) return;
 
@@ -80,12 +92,14 @@ export default function StudentDirectory() {
     }
   }
 
+  // Only the creator of a forming group can invite students from the directory.
   const isCreator =
     myGroup &&
     student &&
     myGroup.created_by === student.studentId &&
     myGroup.status === 'forming';
 
+  // Pre-calculate summary numbers for the cards above the directory results.
   const stats = useMemo(() => {
     const available = students.filter((item) => !item.group).length;
     const inGroups = students.length - available;
@@ -99,6 +113,8 @@ export default function StudentDirectory() {
     };
   }, [students]);
 
+  // Apply the search text and selected filter locally because the demo directory
+  // data set is small and this keeps the UI responsive while typing.
   const filteredStudents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -156,12 +172,17 @@ export default function StudentDirectory() {
           {student && (
             <span className="nav-name">
               {student.name}
+
               <span
                 className={`badge ${
-                  student.isNew ? 'badge-amber' : 'badge-green'
+                  student.isNew
+                    ? 'badge-amber'
+                    : 'badge-green'
                 }`}
               >
-                {student.isNew ? 'New Student' : 'Returning'}
+                {student.isNew
+                  ? 'New Student'
+                  : 'Returning'}
               </span>
             </span>
           )}
@@ -174,7 +195,11 @@ export default function StudentDirectory() {
             Dashboard
           </button>
 
-          <button className="logout-btn" onClick={handleLogout}>
+          <button
+            type="button"
+            className="logout-btn"
+            onClick={handleLogout}
+          >
             Sign out
           </button>
         </div>
@@ -184,9 +209,10 @@ export default function StudentDirectory() {
         <section className="directory-hero">
           <div>
             <h1 className="page-title">Student Directory</h1>
+
             <p className="page-subtitle">
-              Browse classmates, compare tutorial availability and find
-              teammates who can fit your group constraints.
+              Browse classmates, compare tutorial availability and
+              find teammates who can fit your group constraints.
             </p>
           </div>
 
@@ -194,6 +220,7 @@ export default function StudentDirectory() {
             <div className="directory-current-group">
               <span className="section-label">Current group</span>
               <strong>{myGroup.name}</strong>
+
               <span>
                 {myGroup.group_id} · {myGroup.status}
               </span>
@@ -202,24 +229,33 @@ export default function StudentDirectory() {
             <div className="directory-current-group">
               <span className="section-label">Current group</span>
               <strong>Not in a group</strong>
-              <span>Create one from the dashboard to send invites.</span>
+
+              <span>
+                Create one from the dashboard to send invites.
+              </span>
             </div>
           )}
         </section>
 
-        <section className="directory-stats-grid" aria-label="Directory summary">
+        <section
+          className="directory-stats-grid"
+          aria-label="Directory summary"
+        >
           <div className="directory-stat-card">
             <span>Total students</span>
             <strong>{stats.total}</strong>
           </div>
+
           <div className="directory-stat-card">
             <span>Available</span>
             <strong>{stats.available}</strong>
           </div>
+
           <div className="directory-stat-card">
             <span>In groups</span>
             <strong>{stats.inGroups}</strong>
           </div>
+
           <div className="directory-stat-card">
             <span>New students</span>
             <strong>{stats.newStudents}</strong>
@@ -227,7 +263,10 @@ export default function StudentDirectory() {
         </section>
 
         <section className="card directory-controls">
-          <label className="directory-search-label" htmlFor="student-search">
+          <label
+            className="directory-search-label"
+            htmlFor="student-search"
+          >
             Search student directory
           </label>
 
@@ -240,7 +279,10 @@ export default function StudentDirectory() {
               placeholder="Search by name, student ID, cohort or tutorial slot"
             />
 
-            <div className="directory-filter-group" aria-label="Student filter">
+            <div
+              className="directory-filter-group"
+              aria-label="Student filter"
+            >
               {filterOptions.map((option) => (
                 <button
                   key={option.value}
@@ -259,13 +301,19 @@ export default function StudentDirectory() {
 
         <section className="directory-results">
           <div className="directory-results-header">
-            <div className="card-title teal">Browse students</div>
+            <div className="card-title teal">
+              Browse students
+            </div>
+
             <span>{filteredStudents.length} matching</span>
           </div>
 
           {filteredStudents.length === 0 ? (
             <div className="card directory-empty-state">
-              <div className="empty-title">No students match this search.</div>
+              <div className="empty-title">
+                No students match this search.
+              </div>
+
               <p className="muted">
                 Try another name, cohort or tutorial slot.
               </p>
@@ -275,8 +323,12 @@ export default function StudentDirectory() {
               {filteredStudents.map((item) => {
                 const isCurrentStudent =
                   student?.studentId === item.studentId;
+
+                // Invitations should only target ungrouped classmates, never the logged-in user.
                 const canInvite =
-                  isCreator && !item.group && !isCurrentStudent;
+                  isCreator &&
+                  !item.group &&
+                  !isCurrentStudent;
 
                 return (
                   <article
@@ -291,6 +343,7 @@ export default function StudentDirectory() {
                       <div className="directory-student-main">
                         <div className="directory-name-row">
                           <h2>{item.name}</h2>
+
                           {isCurrentStudent && (
                             <span className="badge badge-blue">
                               You
@@ -303,7 +356,9 @@ export default function StudentDirectory() {
 
                       <span
                         className={`badge ${
-                          item.isNew ? 'badge-amber' : 'badge-green'
+                          item.isNew
+                            ? 'badge-amber'
+                            : 'badge-green'
                         }`}
                       >
                         {item.isNew ? 'New' : 'Returning'}
@@ -318,8 +373,11 @@ export default function StudentDirectory() {
 
                       <div>
                         <span>Group status</span>
+
                         <strong>
-                          {item.group ? item.group.name : 'Available'}
+                          {item.group
+                            ? item.group.name
+                            : 'Available'}
                         </strong>
                       </div>
                     </div>
@@ -335,30 +393,48 @@ export default function StudentDirectory() {
                     <div className="directory-card-footer">
                       <span>{item.email}</span>
 
-                      {canInvite ? (
+                      <div className="directory-card-actions">
                         <button
                           type="button"
-                          className="btn btn-blue btn-sm"
-                          disabled={invitingId === item.studentId}
-                          onClick={() => handleInvite(item.studentId)}
+                          className="btn btn-teal btn-sm"
+                          onClick={() =>
+                            handleViewProfile(item.studentId)
+                          }
                         >
-                          {invitingId === item.studentId
-                            ? 'Sending...'
-                            : 'Invite'}
+                          View profile
                         </button>
-                      ) : (
-                        <span
-                          className={`directory-status ${
-                            item.group ? 'is-busy' : 'is-open'
-                          }`}
-                        >
-                          {isCurrentStudent
-                            ? 'Current user'
-                            : item.group
-                              ? item.group.status
-                              : 'Open'}
-                        </span>
-                      )}
+
+                        {canInvite ? (
+                          <button
+                            type="button"
+                            className="btn btn-blue btn-sm"
+                            disabled={
+                              invitingId === item.studentId
+                            }
+                            onClick={() =>
+                              handleInvite(item.studentId)
+                            }
+                          >
+                            {invitingId === item.studentId
+                              ? 'Sending...'
+                              : 'Invite'}
+                          </button>
+                        ) : (
+                          <span
+                            className={`directory-status ${
+                              item.group
+                                ? 'is-busy'
+                                : 'is-open'
+                            }`}
+                          >
+                            {isCurrentStudent
+                              ? 'Current user'
+                              : item.group
+                                ? item.group.status
+                                : 'Open'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </article>
                 );
