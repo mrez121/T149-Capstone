@@ -2,13 +2,12 @@
 import {useState, useEffect} from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import Link from "next/link";
 
-export default function tutorDashboard() {
+export default function adminDashboard() {
     //admin functionality up here
     const router = useRouter();
 
-    const [unit, setUnit] = useState('');
-    const [unitEnrolments, setUnitEnrolments] = useState([]);
     const [toast, setToast] = useState(null);
 
     //Reusable feedback helper for actions on page.
@@ -17,27 +16,6 @@ export default function tutorDashboard() {
         setTimeout(() => setToast(null), 4500)
     }
     
-    // Gets the enrolments for a specified unit
-    async function getEnrolments() {
-        //Pass the 'unit' state as a parameter to fetch url
-        const res = await fetch(`api/admin/unit-enrolments?unit=${unit}`, {method: 'GET'});
-        const data = await res.json();
-
-        //Check if the query was successful, throw an error if not.
-        if(res.ok) {
-            showToast(`${data.unit} enrolments fetched.`);
-            console.log(data)
-        }
-        else {
-            showToast(data.error, 'error');
-        }
-    }
-
-    //Test function to move to units page
-    async function unitsNav() {
-        router.push('admin/units');
-    }
-
     //Logout of the admin dashboard and return to login page
     async function handleLogout() {
         await fetch("/api/auth/logout", {method: "POST"});
@@ -71,10 +49,8 @@ export default function tutorDashboard() {
                 <p className="page-subtitle">
                     This is a test page for admin/tutor login.
                 </p>
-                <button onClick={() => setUnit('IFB398')}>IFB398</button>
-                <button onClick={() => setUnit('IFB399')}>IFB399</button>
-                <button onClick={getEnrolments}>List enrolments in unit</button>
-                <button onClick={unitsNav}>Go to units page</button>
+                <Link href="/admin/units" className="abtn abtn-blue">View Units</Link>
+                <Link href="/admin/units/enrolments" className="abtn abtn-blue">View Enrolments</Link>
             </div>
         </>
     )
