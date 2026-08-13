@@ -22,7 +22,6 @@ export default function LoginPage() {
     const data = await res.json();
     setLoading(false);
     //Determine next page based on payload from login fetch data
-    //Confirmed that this logic will move to the correct page if res.status in api/auth/login.js returns the payload as either student or tutor.
     if (res.ok && data.student.isAdmin == 0) {
       router.push('/dashboard');
     }
