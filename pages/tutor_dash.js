@@ -122,6 +122,71 @@ export default function adminDashboard() {
                             </Link>
                         </div>
                     </div>
+
+                    <div className="card">
+                        <div className="card-title purple">
+                            Group Management
+                        </div>
+
+                        <p className="muted">
+                            View student groups and manage their members
+                            and formation status.
+                        </p>
+
+                        <div
+                            className="btn-row"
+                            style={{marginTop:20}}
+                        >
+                            <button
+                                className="btn btn-blue"
+                                onClick={() =>
+                                    showToast(
+                                        "View All Groups is still in development."
+                                    )
+                                }
+                            >
+                                View All Groups
+                            </button>
+
+                            <button
+                                className="btn btn-teal"
+                                onClick={() =>
+                                    showToast(
+                                        "Manage Groups is still in development."
+                                    )
+                                }
+                            >
+                                Manage Groups
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-title amber">
+                            Export CSV
+                        </div>
+
+                        <p className="muted">
+                            Export unit, student and group information
+                            as a CSV file.
+                        </p>
+
+                        <div
+                            className="btn-row"
+                            style={{marginTop:20}}
+                        >
+                            <button
+                                className="btn btn-blue"
+                                onClick={() =>
+                                    showToast(
+                                        "CSV export is still in development."
+                                    )
+                                }
+                            >
+                                Export CSV
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </>
