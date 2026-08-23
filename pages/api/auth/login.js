@@ -3,7 +3,25 @@ import bcrypt                          from 'bcryptjs';
 import { getDb }                       from '../../../lib/db';
 import { createToken, setTokenCookie } from '../../../lib/session';
 
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests to the login page
+ * POST - sends the provided studentId and password for querying against the database
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
+  /**
+   * @const studentId
+   * @const password
+   * @const db
+   * @const rows
+   * @const student
+   * @const payload
+   * @const token
+   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { studentId, password } = req.body;
@@ -11,8 +29,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Student ID and password are required.' });
   }
 
-  /*Need to figure out how to query both tables and determine if the user is a student or tutor
-  without breaking functionality. Previous commits (before reverts) broke data flow somewhere here.*/
   const db = getDb();
   const [rows] = await db.query(
     'SELECT * FROM students WHERE student_id = ?',

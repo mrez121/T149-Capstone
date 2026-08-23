@@ -3,7 +3,27 @@ import { getDb }        from '../../../lib/db';
 import { requireAuth }  from '../../../lib/session';
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * @function handler
+ * @async
+ * This function handles the HTTP requests group related queries and functions
+ * GET  - list public groups
+ * POST - create a public or private group
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
+  /**
+   * @const student
+   * @const db
+   * @const groups
+   * @const existing
+   * @const type
+   * @const groupId
+   * @const countRows
+   * @const groupName
+   */
   const student = requireAuth(req, res);
   if (!student) return;
 

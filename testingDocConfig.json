@@ -1,0 +1,23 @@
+{
+    "source": {
+        "include": ["./testing"],
+        "exclude": [
+        "./node_modules",
+        "./lib",
+        "./pages",
+        "./.next", 
+        "./.vscode", 
+        "./styles", 
+        ".gitignore", 
+        "next.config.js", 
+        "package-lock.json",
+        "package.json",
+        "setup.js",
+        ".env.local"
+    ]
+    },
+    "opts": {
+        "destination": "./testDocumentation",
+        "recurse": true
+    }
+}

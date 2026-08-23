@@ -6,7 +6,21 @@ import { useRouter }           from 'next/router';
 import Head                    from 'next/head';
 import Link                    from 'next/link';
 
+/**
+ * @function EditUnitPage
+ * Builds TeamUp's edit unit page using react.js
+ * @returns Edit unit page HTML (if loading state = false) || loading HTML (if loading state= true)
+ */
 export default function EditUnitPage() {
+  /**
+   * @const router
+   * @const id
+   * @const form
+   * @const loading
+   * @const saving
+   * @const error
+   * @const toast
+   */
   const router = useRouter();
   const { id } = router.query;
 
@@ -44,19 +58,33 @@ export default function EditUnitPage() {
       });
   }, [id]);
 
-  // Update form state when input changes
+  /**
+   * @function handleChange
+   * Update form state when input changes
+   * @param {*} e react event
+   */
   function handleChange(e) {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
   }
 
-  // Show a temporary notification message
+  /**
+   * @function showToast
+   * Show a temporary notification message
+   * @param {*} msg 
+   * @param {*} type 
+   */
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   }
 
-  // Submit updated unit to the API
+  /**
+   * @function handleSubmit
+   * @async
+   * Submit updated unit to the API
+   * @param {*} e react event
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');

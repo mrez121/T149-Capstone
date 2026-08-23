@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/dashboard.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/dashboard.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// pages/dashboard.js
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+
+/**
+ * @default Dashboard
+ * Builds TeamUp Dashboard page using React.js
+ * @returns Dashboard HTML (if loading state = false) || Loading HTML (if loading state = true) 
+ */
+export default function Dashboard() {
+  
+  /**
+   * Constants related to page navigation and states.
+   * @constant Router:        Navigate to other pages
+   * @constant student:       (react state) Essentially the user's profile and information.
+   * @constant myGroup:       (react state) The group that the user is a part of
+   * @constant myMembers:     (react state) The other students that are in the user' group
+   * @constant mySlots:       (react state) The timeslots the user is available according to their database information
+   * @constant publicGroups:  (react state) The public groups that are available to browse
+   * @constant invites:       (react state) The invites from groups that have been sent to the user
+   * @constant groupType:     (react state) If a group is created by the user, it can be either public or private
+   * @constant inviteTarget:  (react state) The student that is being target by the user for an invite to the user's group
+   * @constant toast:         (react state) A reusable notification
+   * @constant loading:       (react state) A state that assists in page construction while data is being fetched.
+   */
+  const router = useRouter();
+  const [student, setStudent] = useState(null);
+  const [myGroup, setMyGroup] = useState(null);
+  const [myMembers, setMyMembers] = useState([]);
+  const [mySlots, setMySlots] = useState([]);
+  const [publicGroups, setPublicGroups] = useState([]);
+  const [invites, setInvites] = useState([]);
+  const [groupType, setGroupType] = useState('public');
+  const [inviteTarget, setInviteTarget] = useState('');
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  /**
+   * @function loadData
+   * @async
+   * Load the dashboard state from both personal group data and public groups.
+   * This keeps the grouped and ungrouped dashboard views in sync after each action.
+   * loading state defines page construction at the end of this function call, ensuring that any updates to data are reflected in the user's view.
+   */
+  async function loadData() {
+    /**
+     * @const mineRes: The user's own/group information as received from the database
+     * @const pubRes:  The information about public groups that can be joined.
+     */
+    const [mineRes, pubRes] = await Promise.all([
+      fetch('/api/groups/mine'),
+      fetch('/api/groups'),
+    ]);
+    // Return to index page if there is an error retrieving user's information (such as it not existing)
+    if (mineRes.status === 401) {
+      router.push('/');
+      return;
+    }
+    /**
+     * @const mine: JSON form of mineRes to update various state values
+     * @const pub:  JSON form of pubRes to update publicGroup state value
+     */
+    const mine = await mineRes.json();
+    const pub = await pubRes.json();
+
+    setStudent(mine.student || null);
+    setMyGroup(mine.group || null);
+    setMyMembers(mine.members || []);
+    setMySlots(mine.slots || []);
+    setInvites(mine.invites || []);
+    setPublicGroups(pub.groups || []);
+    setLoading(false);
+  }
+
+  // Update the page using loadData function
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  /**
+   * @function showToast
+   * A reusable feedback helper for create, join, invite, lock, and leave actions
+   * @param {*} msg:  A message to be displayed to the user
+   * @param {*} type: Determines the visual formatting of the toast displayed
+   */
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4500);
+  }
+
+  
+  /**
+   * Live constraint checks used by both the status card and the active group panel.
+   * @const memberCount:  How many members are in the group
+   * @const newCount:     How many members of the group are new to QUT
+   * @const sizeOk:       Variable to check if memberCount is acceptable (either 4 or 5 students for IFB398/399)
+   * @const newOk:        Variable to check if newCount is accecptable (can only have up to 2 new students in IFB398/399)
+   * @const slotOk:       Variable to check if all members of the group have a shared availability slot
+   * @const allOk:        Variable to check if every constraint has been met by the group
+   * @const seatsNeeded:  How many additional members are needed for the sizeOk variable to become valid (feedback variable for user)
+   * @const openSeats:    How many spaces are available within the group up to the maximum group size for the unit (feedback variable for user)
+   */
+  const memberCount = myMembers.length;
+  const newCount = myMembers.filter((m) => m.is_new).length;
+  const sizeOk = memberCount >= 4 &amp;&amp; memberCount &lt;= 5;
+  const newOk = newCount &lt;= 2;
+  const slotOk = !!myGroup?.shared_slot;
+  const allOk = sizeOk &amp;&amp; newOk &amp;&amp; slotOk;
+  const seatsNeeded = Math.max(0, 4 - memberCount);
+  const openSeats = Math.max(0, 5 - memberCount);
+
+  /**
+   * @const isCreator: Check to see if current user is the creator of the group they are in.
+   * Only the group creator can send invitations or lock a forming group.
+   */
+  const isCreator =
+    myGroup &amp;&amp;
+    student &amp;&amp;
+    myGroup.created_by === student.studentId;
+
+  /**
+   * @function handleCreate
+   * @async
+   * Create a new group if the current user is not currently in a group.
+   * Adds a new group to the database with the current user's info, displays a toast, then reloads the data within the page.
+   * If an error occurs, display the error information as a toast
+   * @param {*} e: React event that triggers the function
+   */
+  async function handleCreate(e) {
+    e.preventDefault();
+
+    const res = await fetch('/api/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: groupType }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast(`${data.name} created.`);
+      loadData();
+    } else {
+      showToast(data.error, 'error');
+    }
+  }
+
+  /**
+   * @function handleJoin
+   * @async
+   * Join a public group directly from the available groups list.
+   * Adds the user to the specified group, displays a toast, then reloads the data within the page.
+   * If an error occurs, display the error information as a toast
+   * @param {*} groupId: The Id of the group fetched from the database
+   */
+  async function handleJoin(groupId) {
+    const res = await fetch('/api/groups/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast('Successfully joined the group.');
+      loadData();
+    } else {
+      showToast(data.errors?.join(' ') || data.error, 'error');
+    }
+  }
+
+  /**
+   * @function handleInviteStudent
+   * @async
+   * Invite a student by ID from the active group action panel.
+   * Creates an invite for the current group to the targeted user and adds it to the database, displays a toast, and resets the inviteTarget state.
+   * If an error occurs, display the error information as a toast
+   * @param {*} e: React event that triggers the function
+   */
+  async function handleInviteStudent(e) {
+    e.preventDefault();
+
+    const res = await fetch('/api/groups/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        groupId: myGroup.group_id,
+        targetStudentId: inviteTarget,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast(data.message);
+      setInviteTarget('');
+    } else {
+      showToast(data.errors?.join(' ') || data.error, 'error');
+    }
+  }
+
+  // Accept or decline an invitation shown in the pending invite banner.
+  /**
+   * @function handleRespondInvite
+   * @async
+   * Accept or decline an invitation shown in the pending invite banner.
+   * Gets the invite from the database and handles it according to the decision made by the user (accept or decline), displays a toast, then reloads the data within the page.
+   * If an error occurs, display the error information as a toast
+   * @param {*} inviteId: the Id of the invite that the user received.
+   * @param {*} action:   can be either "accept" or "decline" based on the button pressed by the user.
+   */
+  async function handleRespondInvite(inviteId, action) {
+    const res = await fetch('/api/groups/respond-invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inviteId, action }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast(
+        action === 'accept'
+          ? 'You joined the group!'
+          : 'Invite declined.'
+      );
+      loadData();
+    } else {
+      showToast(data.errors?.join(' ') || data.error, 'error');
+    }
+  }
+
+  /**
+   * @function handleLock
+   * @async
+   * Lock a group once all team-size, new-student, and shared-slot constraints pass.
+   * Changes the group's status in the database to "locked", shows a toast, then reloads the data within the page.
+   * If an error occurs, display a toast with the error information.
+   */
+  async function handleLock() {
+    const res = await fetch('/api/groups/lock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId: myGroup.group_id }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast('Group locked and confirmed valid!');
+      loadData();
+    } else {
+      showToast(data.errors?.join(' ') || data.error, 'error');
+    }
+  }
+
+  /**
+   * @function handleLeave
+   * @async
+   * Leave the current group after confirmation, update the database to reflect that the user has left, display a toast, and then refresh dashboard data.
+   * If an error occurs, display a toast with the error information.
+   */
+  async function handleLeave() {
+    if (!confirm('Are you sure you want to leave this group?')) {
+      return;
+    }
+
+    const res = await fetch('/api/groups/leave', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId: myGroup.group_id }),
+    });
+
+    if (res.ok) {
+      showToast('You have left the group.');
+      setMyGroup(null);
+      setMyMembers([]);
+      loadData();
+    }
+  }
+
+  /**
+   * @function handleLogout
+   * @async
+   * End the session and return the user to the login page.
+   */
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/');
+  }
+
+  if (loading) {
+    return (
+      &lt;div
+        style={{
+          background: '#0D1117',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#8B949E',
+        }}
+      >
+        Loading...
+      &lt;/div>
+    );
+  }
+
+  return (
+    &lt;>
+      &lt;Head>
+        &lt;title>TeamUp — Dashboard&lt;/title>
+      &lt;/Head>
+
+      {toast &amp;&amp; (
+        &lt;div className={`toast toast-${toast.type}`}>
+          {toast.msg}
+        &lt;/div>
+      )}
+
+      &lt;nav>
+        &lt;div className="logo">
+          Team&lt;span>Up&lt;/span>
+        &lt;/div>
+
+        &lt;div className="nav-right">
+          {student &amp;&amp; (
+            &lt;span className="nav-name">
+              {student.name}
+
+              &lt;span
+                className={`badge ${
+                  student.isNew
+                    ? 'badge-amber'
+                    : 'badge-green'
+                }`}
+              >
+                {student.isNew
+                  ? 'New Student'
+                  : 'Returning'}
+              &lt;/span>
+            &lt;/span>
+          )}
+
+          &lt;button
+            className="logout-btn"
+            onClick={handleLogout}
+          >
+            Sign out
+          &lt;/button>
+        &lt;/div>
+      &lt;/nav>
+
+      &lt;div className="container">
+        &lt;h1 className="page-title">Dashboard&lt;/h1>
+
+        &lt;p className="page-subtitle">
+          Manage your availability, group and team requirements.
+        &lt;/p>
+
+        {/* Student Directory entry point for both grouped and ungrouped students. */}
+        &lt;div className="directory-entry-card">
+          &lt;div className="directory-entry-copy">
+            &lt;div className="card-title teal">
+              Student Directory
+            &lt;/div>
+
+            &lt;p>
+              Browse classmates, compare tutorial availability and
+              find potential teammates from one place.
+            &lt;/p>
+          &lt;/div>
+
+          &lt;button
+            className="btn btn-blue directory-entry-btn"
+            type="button"
+            onClick={() => router.push('/students')}
+          >
+            Open directory
+          &lt;/button>
+        &lt;/div>
+
+        {/* Pending invites */}
+        {invites.length > 0 &amp;&amp; (
+          &lt;div className="invites-banner">
+            &lt;div className="invites-title">
+              📬 Pending Group Invites
+            &lt;/div>
+
+            {invites.map((inv) => (
+              &lt;div key={inv.id} className="invite-row">
+                &lt;span>
+                  &lt;strong>{inv.from_name}&lt;/strong> has invited
+                  you to join &lt;strong>{inv.group_name}&lt;/strong>
+                &lt;/span>
+
+                &lt;div className="invite-btns">
+                  &lt;button
+                    className="btn btn-teal btn-sm"
+                    onClick={() =>
+                      handleRespondInvite(inv.id, 'accept')
+                    }
+                  >
+                    Accept
+                  &lt;/button>
+
+                  &lt;button
+                    className="btn btn-red btn-sm"
+                    onClick={() =>
+                      handleRespondInvite(inv.id, 'decline')
+                    }
+                  >
+                    Decline
+                  &lt;/button>
+                &lt;/div>
+              &lt;/div>
+            ))}
+          &lt;/div>
+        )}
+
+        &lt;div className="grid">
+          {/* My Tutorial Slots */}
+          &lt;div className="card tutorial-card">
+            &lt;div className="card-title teal">
+              My Tutorial Slots
+            &lt;/div>
+
+            &lt;div className="slot-list">
+              {mySlots.length ? (
+                mySlots.map((slot) => (
+                  &lt;span key={slot} className="slot">
+                    {slot}
+                  &lt;/span>
+                ))
+              ) : (
+                &lt;span className="muted">
+                  No slots recorded
+                &lt;/span>
+              )}
+            &lt;/div>
+
+            &lt;div className="card-divider" />
+
+            &lt;p className="card-helper">
+              These are the times you are available for
+              tutorials. Keep them up to date so teammates
+              can find a shared time with you.
+            &lt;/p>
+          &lt;/div>
+
+          {/* Constraint Status */}
+          &lt;div className="card constraint-card">
+            &lt;div className="card-title amber">
+              Constraint Status
+            &lt;/div>
+
+            {myGroup ? (
+              &lt;>
+                &lt;div
+                  className={`constraint-row ${
+                    sizeOk ? 'c-ok' : 'c-fail'
+                  }`}
+                >
+                  &lt;span>
+                    {sizeOk ? '✅' : '❌'} Team size
+                  &lt;/span>
+
+                  &lt;span className="cv">
+                    {memberCount} / 4–5 members
+                  &lt;/span>
+                &lt;/div>
+
+                &lt;div
+                  className={`constraint-row ${
+                    newOk ? 'c-ok' : 'c-fail'
+                  }`}
+                >
+                  &lt;span>
+                    {newOk ? '✅' : '❌'} New students
+                  &lt;/span>
+
+                  &lt;span className="cv">
+                    {newCount} / max 2
+                  &lt;/span>
+                &lt;/div>
+
+                &lt;div
+                  className={`constraint-row ${
+                    slotOk ? 'c-ok' : 'c-fail'
+                  }`}
+                >
+                  &lt;span>
+                    {slotOk ? '✅' : '❌'} Shared slot
+                  &lt;/span>
+
+                  &lt;span className="cv">
+                    {myGroup.shared_slot || 'Not found yet'}
+                  &lt;/span>
+                &lt;/div>
+
+                {myGroup.status === 'forming' &amp;&amp;
+                  (allOk ? (
+                    &lt;div className="all-ok">
+                      🎉 All constraints met — ready to lock!
+                    &lt;/div>
+                  ) : (
+                    &lt;div className="not-ok">
+                      Invite more members to meet all
+                      constraints.
+                    &lt;/div>
+                  ))}
+
+                {myGroup.status === 'locked' &amp;&amp; (
+                  &lt;div className="all-ok">
+                    🔒 Group locked and confirmed valid.
+                  &lt;/div>
+                )}
+              &lt;/>
+            ) : (
+              &lt;>
+                &lt;div className="constraint-row c-info">
+                  &lt;span>👥 Team size&lt;/span>
+                  &lt;span className="cv">4–5 members&lt;/span>
+                &lt;/div>
+
+                &lt;div className="constraint-row c-info">
+                  &lt;span>🎓 New students&lt;/span>
+                  &lt;span className="cv">
+                    Max 2 per group
+                  &lt;/span>
+                &lt;/div>
+
+                &lt;div className="constraint-row c-info">
+                  &lt;span>🗓 Tutorial slot&lt;/span>
+                  &lt;span className="cv">
+                    1+ shared slot
+                  &lt;/span>
+                &lt;/div>
+
+                &lt;p
+                  className="muted"
+                  style={{
+                    marginTop: 12,
+                    fontSize: 13,
+                  }}
+                >
+                  Join or create a group to see live
+                  constraint checks.
+                &lt;/p>
+              &lt;/>
+            )}
+          &lt;/div>
+
+          {/* My Group */}
+          &lt;div className="card full-width">
+            &lt;div className="card-title purple">
+              My Group
+            &lt;/div>
+            
+            {myGroup ? (
+              /* Active group layout for students who have already joined or created a group. */
+              &lt;div className="active-group-layout">
+                &lt;div className="active-group-main">
+                  &lt;div className="active-group-hero">
+                    &lt;div>
+                      &lt;div className="group-kicker">
+                        Current team
+                      &lt;/div>
+                      
+                      &lt;div className="group-name active-group-name">
+                        {myGroup.name}
+                      &lt;/div>
+
+                      &lt;div className="group-meta active-group-meta">
+                        &lt;span>{myGroup.group_id}&lt;/span>
+
+                        &lt;span
+                          className={`badge ${
+                            myGroup.status === 'locked'
+                              ? 'badge-red'
+                              : 'badge-blue'
+                          }`}
+                        >
+                          {myGroup.status}
+                        &lt;/span>
+
+                        &lt;span>
+                          {myGroup.type === 'private'
+                            ? '🔒 Private'
+                            : '🌐 Public'}
+                        &lt;/span>
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;div
+                      className={`group-health-pill ${
+                        allOk ? 'ready' : 'needs-work'
+                      }`}
+                    >
+                      &lt;strong>
+                        {allOk ? 'Ready to lock' : 'Building team'}
+                      &lt;/strong>
+
+                      &lt;span>
+                        {seatsNeeded > 0
+                          ? `${seatsNeeded} more needed`
+                          : `${openSeats} open seat${
+                              openSeats === 1 ? '' : 's'
+                            }`}
+                      &lt;/span>
+                    &lt;/div>
+                  &lt;/div>
+
+                  &lt;div className="group-progress-grid">
+                    &lt;div
+                      className={`group-metric ${
+                        sizeOk ? 'metric-ok' : 'metric-warn'
+                      }`}
+                    >
+                      &lt;span>Team size&lt;/span>
+                      &lt;strong>{memberCount}/5&lt;/strong>
+                    &lt;/div>
+
+                    &lt;div
+                      className={`group-metric ${
+                        newOk ? 'metric-ok' : 'metric-warn'
+                      }`}
+                    >
+                      &lt;span>New students&lt;/span>
+                      &lt;strong>{newCount}/2&lt;/strong>
+                    &lt;/div>
+
+                    &lt;div
+                      className={`group-metric ${
+                        slotOk ? 'metric-ok' : 'metric-warn'
+                      }`}
+                    >
+                      &lt;span>Shared slot&lt;/span>
+                      &lt;strong>
+                        {myGroup.shared_slot || 'Missing'}
+                      &lt;/strong>
+                    &lt;/div>
+                  &lt;/div>
+
+                  &lt;div className="active-members-heading">
+                    &lt;div>
+                      &lt;div className="section-label members-label">
+                        Team seats
+                      &lt;/div>
+
+                      &lt;p>
+                        {memberCount} member{memberCount === 1 ? '' : 's'}
+                        joined, {openSeats} seat
+                        {openSeats === 1 ? '' : 's'} still open.
+                      &lt;/p>
+                    &lt;/div>
+
+                    &lt;span className="group-seat-count">
+                      {memberCount}/5 filled
+                    &lt;/span>
+                  &lt;/div>
+
+                  &lt;div className="members-grid active-members-grid">
+                    {myMembers.map((member) => (
+                      &lt;div
+                        key={member.student_id}
+                        className="member-card active-member-card"
+                      >
+                        &lt;div className="avatar">
+                          {member.name[0]}
+                        &lt;/div>
+
+                        &lt;div className="member-info">
+                          &lt;div className="member-name">
+                            {member.name}
+                          &lt;/div>
+
+                          &lt;div className="member-id">
+                            {member.student_id}
+                          &lt;/div>
+                        &lt;/div>
+
+                        &lt;span
+                          className={`badge ${
+                            member.is_new
+                              ? 'badge-amber'
+                              : 'badge-green'
+                          }`}
+                        >
+                          {member.is_new ? 'New' : 'Returning'}
+                        &lt;/span>
+                      &lt;/div>
+                    ))}
+
+                    {/* Empty seat cards make the remaining group capacity visible at a glance. */}
+                    {Array.from({ length: openSeats }).map(
+                      (_, index) => (
+                        &lt;div
+                          key={`open-seat-${index}`}
+                          className="member-card active-member-card empty-seat-card"
+                        >
+                          &lt;div className="avatar empty-seat-avatar">
+                            +
+                          &lt;/div>
+
+                          &lt;div className="member-info">
+                            &lt;div className="member-name">
+                              Open seat
+                            &lt;/div>
+
+                            &lt;div className="member-id">
+                              Invite or browse students
+                            &lt;/div>
+                          &lt;/div>
+
+                          &lt;span className="badge badge-blue">
+                            Slot {memberCount + index + 1}
+                          &lt;/span>
+                        &lt;/div>
+                      )
+                    )}
+                  &lt;/div>
+                &lt;/div>
+
+                &lt;aside className="active-group-side">
+                  &lt;div className="group-action-panel">
+                    &lt;div className="section-label">
+                      Group actions
+                    &lt;/div>
+
+                    {/* Repeat the key formation checks beside the actions so the next step is clear. */}
+                    &lt;div className="formation-checklist">
+                      &lt;div
+                        className={`formation-check ${
+                          sizeOk ? 'complete' : 'attention'
+                        }`}
+                      >
+                        &lt;span>Team size&lt;/span>
+                        &lt;strong>{memberCount}/4 minimum&lt;/strong>
+                      &lt;/div>
+
+                      &lt;div
+                        className={`formation-check ${
+                          newOk ? 'complete' : 'attention'
+                        }`}
+                      >
+                        &lt;span>New-student limit&lt;/span>
+                        &lt;strong>{newCount}/2 used&lt;/strong>
+                      &lt;/div>
+
+                      &lt;div
+                        className={`formation-check ${
+                          slotOk ? 'complete' : 'attention'
+                        }`}
+                      >
+                        &lt;span>Shared tutorial&lt;/span>
+                        &lt;strong>
+                          {myGroup.shared_slot || 'Not matched'}
+                        &lt;/strong>
+                      &lt;/div>
+                    &lt;/div>
+
+                    {isCreator &amp;&amp;
+                    myGroup.status === 'forming' ? (
+                      &lt;>
+                        &lt;p className="action-help">
+                          Invite classmates by student ID, or browse
+                          the directory to find available teammates.
+                        &lt;/p>
+
+                        &lt;form
+                          onSubmit={handleInviteStudent}
+                          className="invite-section active-invite-section"
+                        >
+                          &lt;input
+                            className="text-input"
+                            placeholder="Student ID e.g. n10000003"
+                            value={inviteTarget}
+                            onChange={(e) =>
+                              setInviteTarget(e.target.value)
+                            }
+                            required
+                          />
+
+                          &lt;button
+                            className="btn btn-blue"
+                            type="submit"
+                          >
+                            Send invite
+                          &lt;/button>
+                        &lt;/form>
+                      &lt;/>
+                    ) : (
+                      &lt;p className="action-help">
+                        {myGroup.status === 'locked'
+                          ? 'This group is locked and confirmed.'
+                          : 'Only the group creator can send invitations.'}
+                      &lt;/p>
+                    )}
+
+                    &lt;div className="active-action-row">
+                      &lt;button
+                        className="btn btn-teal"
+                        type="button"
+                        onClick={() => router.push('/students')}
+                      >
+                        Browse students
+                      &lt;/button>
+
+                      {myGroup.status === 'forming' &amp;&amp; (
+                        &lt;>
+                          {isCreator &amp;&amp; allOk &amp;&amp; (
+                            &lt;button
+                              className="btn btn-blue"
+                              type="button"
+                              onClick={handleLock}
+                            >
+                              Lock group
+                            &lt;/button>
+                          )}
+
+                          &lt;button
+                            className="btn btn-red"
+                            type="button"
+                            onClick={handleLeave}
+                          >
+                            Leave group
+                          &lt;/button>
+                        &lt;/>
+                      )}
+                    &lt;/div>
+                  &lt;/div>
+                &lt;/aside>
+              &lt;/div>
+            ) : (
+              &lt;div className="empty-group-layout">
+                &lt;div className="empty-group-copy">
+                  &lt;div
+                    className="empty-icon-wrap"
+                    aria-hidden="true"
+                  >
+                    &lt;span className="empty-icon">
+                      👥
+                    &lt;/span>
+                  &lt;/div>
+
+                  &lt;div>
+                    &lt;div className="empty-title">
+                      You are not in a group yet.
+                    &lt;/div>
+
+                    &lt;p className="muted">
+                      Create a group and invite your
+                      teammates or browse public groups below.
+                    &lt;/p>
+                  &lt;/div>
+                &lt;/div>
+
+                &lt;form
+                  onSubmit={handleCreate}
+                  className="create-group-panel"
+                >
+                  &lt;div className="section-label">
+                    Create a new group
+                  &lt;/div>
+
+                  &lt;div
+                    className="group-type-toggle"
+                    role="group"
+                    aria-label="Group type"
+                  >
+                    &lt;button
+                      type="button"
+                      className={`group-type-option ${
+                        groupType === 'public'
+                          ? 'active'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        setGroupType('public')
+                      }
+                    >
+                      &lt;span aria-hidden="true">🌐&lt;/span>
+
+                      &lt;span>
+                        &lt;strong>Public&lt;/strong> — anyone can
+                        request to join
+                      &lt;/span>
+                    &lt;/button>
+
+                    &lt;button
+                      type="button"
+                      className={`group-type-option ${
+                        groupType === 'private'
+                          ? 'active'
+                          : ''
+                      }`}
+                      onClick={() =>
+                        setGroupType('private')
+                      }
+                    >
+                      &lt;span aria-hidden="true">🔒&lt;/span>
+
+                      &lt;span>
+                        &lt;strong>Private&lt;/strong> — invite
+                        only
+                      &lt;/span>
+                    &lt;/button>
+                  &lt;/div>
+
+                  &lt;div className="create-group-footer">
+                    &lt;p className="form-help">
+                      Once created, invite teammates by their
+                      student ID from your group panel.
+                    &lt;/p>
+
+                    &lt;button
+                      className="btn btn-blue"
+                      type="submit"
+                    >
+                      Create group
+                    &lt;/button>
+                  &lt;/div>
+                &lt;/form>
+              &lt;/div>
+            )}
+          &lt;/div>
+
+          {/* Public Groups */}
+          {!myGroup &amp;&amp; (
+            &lt;div className="card full-width">
+              &lt;div className="card-title blue">
+                Available Public Groups
+              &lt;/div>
+
+              {publicGroups.length === 0 ? (
+                &lt;div className="empty-public-state">
+                  &lt;div
+                    className="public-empty-icon"
+                    aria-hidden="true"
+                  >
+                    👥
+                  &lt;/div>
+
+                  &lt;div className="empty-title">
+                    No public groups available yet.
+                  &lt;/div>
+
+                  &lt;p className="muted">
+                    Check back later or create your own group
+                    above.
+                  &lt;/p>
+                &lt;/div>
+              ) : (
+                publicGroups.map((group) => (
+                  &lt;div
+                    key={group.group_id}
+                    className="public-group"
+                  >
+                    &lt;div>
+                      &lt;div className="pg-name">
+                        {group.name}
+                      &lt;/div>
+
+                      &lt;div className="pg-meta">
+                        &lt;span className="pg-id">
+                          {group.group_id}
+                        &lt;/span>
+
+                        &lt;span
+                          className={
+                            group.member_count >= 4
+                              ? 'warn'
+                              : 'ok'
+                          }
+                        >
+                          👥 {group.member_count}/5 members
+                        &lt;/span>
+
+                        &lt;span
+                          className={
+                            group.new_count >= 2
+                              ? 'warn'
+                              : 'ok'
+                          }
+                        >
+                          🎓 {group.new_count}/2 new
+                        &lt;/span>
+
+                        {group.shared_slot &amp;&amp; (
+                          &lt;span className="slot">
+                            {group.shared_slot}
+                          &lt;/span>
+                        )}
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;button
+                      className="btn btn-blue btn-sm"
+                      onClick={() =>
+                        handleJoin(group.group_id)
+                      }
+                    >
+                      Join
+                    &lt;/button>
+                  &lt;/div>
+                ))
+              )}
+            &lt;/div>
+          )}
+        &lt;/div>
+      &lt;/div>
+    &lt;/>
+  );
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#StudentDirectoryBuildsTeamUp'sstudentdirectorypageusingreact.js">StudentDirectoryBuilds TeamUp's student directory page using react.js</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#c">c</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#error">error</a></li><li><a href="global.html#existingInvite">existingInvite</a></li><li><a href="global.html#filterOptions">filterOptions</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleViewProfileOpentheprofilepagefortheselectedstudent.">handleViewProfileOpen the profile page for the selected student.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraintsDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraintsDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#inviteRows">inviteRows</a></li><li><a href="global.html#invitingId">invitingId</a></li><li><a href="global.html#isCreator">isCreator</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#newStudents">newStudents</a></li><li><a href="global.html#normalizedQuery">normalizedQuery</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pub:">pub:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#shared">shared</a></li><li><a href="global.html#sharedSlots">sharedSlots</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowashortfeedbackmessageafterinviteactionsorAPIerrors.">showToastShow a short feedback message after invite actions or API errors.</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#students">students</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#token">token</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Aug 23 2026 20:43:17 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

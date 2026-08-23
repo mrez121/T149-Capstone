@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/api/groups/mine.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/api/groups/mine.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// pages/api/groups/mine.js
+import { getDb }       from '../../../lib/db';
+import { requireAuth } from '../../../lib/session';
+
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests for the current user's group information
+ * GET - gets the current user's group information
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
+export default async function handler(req, res) {
+  /**
+   * @const student
+   * @const db
+   * @const grpRows
+   * @var members
+   * @const memberRows
+   * @const slotRows
+   * @const inviteRows
+   */
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed.' });
+
+  const student = requireAuth(req, res);
+  if (!student) return;
+
+  const db = getDb();
+
+  const [grpRows] = await db.query(`
+    SELECT g.* FROM \`groups\` g
+    JOIN group_members gm ON g.group_id = gm.group_id
+    WHERE gm.student_id = ?
+  `, [student.studentId]);
+
+  let members = [];
+  if (grpRows.length > 0) {
+    const [memberRows] = await db.query(`
+      SELECT s.student_id, s.name, s.is_new, s.cohort
+      FROM students s
+      JOIN group_members gm ON s.student_id = gm.student_id
+      WHERE gm.group_id = ?
+    `, [grpRows[0].group_id]);
+    members = memberRows;
+  }
+
+  const [slotRows] = await db.query(
+    'SELECT slot FROM availability WHERE student_id = ? ORDER BY slot',
+    [student.studentId]
+  );
+
+  // Pending invites for this student
+  const [inviteRows] = await db.query(`
+    SELECT i.*, g.name AS group_name, s.name AS from_name
+    FROM invites i
+    JOIN \`groups\` g ON g.group_id = i.group_id
+    JOIN students s  ON s.student_id = i.from_student_id
+    WHERE i.to_student_id = ? AND i.status = 'pending'
+  `, [student.studentId]);
+
+  return res.status(200).json({
+    group:   grpRows[0] || null,
+    members,
+    slots:   slotRows.map(r => r.slot),
+    student,
+    invites: inviteRows,
+  });
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#StudentDirectoryBuildsTeamUp'sstudentdirectorypageusingreact.js">StudentDirectoryBuilds TeamUp's student directory page using react.js</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#c">c</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#error">error</a></li><li><a href="global.html#existingInvite">existingInvite</a></li><li><a href="global.html#filterOptions">filterOptions</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleViewProfileOpentheprofilepagefortheselectedstudent.">handleViewProfileOpen the profile page for the selected student.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraintsDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraintsDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#inviteRows">inviteRows</a></li><li><a href="global.html#invitingId">invitingId</a></li><li><a href="global.html#isCreator">isCreator</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#newStudents">newStudents</a></li><li><a href="global.html#normalizedQuery">normalizedQuery</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pub:">pub:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#shared">shared</a></li><li><a href="global.html#sharedSlots">sharedSlots</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowashortfeedbackmessageafterinviteactionsorAPIerrors.">showToastShow a short feedback message after invite actions or API errors.</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#students">students</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#token">token</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Aug 23 2026 20:43:17 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
