@@ -4,19 +4,37 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
 
+/**
+ * @function adminDashboard
+ * Builds TeamUp admin dashboard using react.js
+ * @returns Admin dashboard hhtml
+ */
 export default function adminDashboard() {
     //admin functionality up here
+    /**
+     * @const router
+     * @const toast
+     */
     const router = useRouter();
 
     const [toast, setToast] = useState(null);
 
-    //Reusable feedback helper for actions on page.
+    /**
+     * @function showToast
+     * Reusable feedback helper for actions on page.
+     * @param {*} msg 
+     * @param {*} type 
+     */
     function showToast(msg, type = 'success') {
         setToast({msg, type});
         setTimeout(() => setToast(null), 4500)
     }
     
-    //Logout of the admin dashboard and return to login page
+    /**
+     * @function handleLogout
+     * @async
+     * Logout of the admin dashboard and return to login page
+     */
     async function handleLogout() {
         await fetch("/api/auth/logout", {method: "POST"});
         router.push("/");

@@ -1,12 +1,26 @@
-//pages/api/admin/units/enrolments-units.js
+//pages/api/admin/units/enrolments_units.js
 // GET - list all units
 // Separated from enrolments_students for modularity/prevent conflicting GET requests to same api
 
 import { getDb } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/session";
 
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests related to units
+ * GET - list all units
+ * Separated from enrolments_students for modularity/prevent conflicting GET requests to same API
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
     //Check user is logged in as admin
+    /**
+     * @const admin
+     * @const db
+     */
     const admin = requireAuth(req, res);
     if(!admin){
         return res.status(401).json({error: "Not logged in."});

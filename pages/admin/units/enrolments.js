@@ -6,6 +6,11 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
 
+/**
+ * @function enrolmentsPage
+ * Builds the TeamUp enrolments page using react.js
+ * @returns enrolments page HTML (if loading state = false) || loading HTML (if loading state = true)
+ */
 export default function enrolmentsPage() {
     //Router and states
     const router = useRouter();
@@ -15,6 +20,11 @@ export default function enrolmentsPage() {
     const [toast, setToast] = useState(null);
 
     //Fetch units from enrolments-units API on page load
+    /**
+     * @function loadUnits
+     * @async
+     * Fetch units from enrolments-units API on page load 
+     */
     async function loadUnits() {
         const res = await fetch('/api/admin/units/enrolments_units');
         //Return to login page if not authorised to view admin pages
@@ -27,14 +37,25 @@ export default function enrolmentsPage() {
     }
     //Load content
     useEffect(() => {loadUnits();}, []);
-
-    //Function to show temporary notification message to confirm actions have been completed
+      
+    /**
+     * @function showToast
+     * Show temporary notification message to confirm actions have been completed
+     * @param {*} msg 
+     * @param {*} type 
+     */
     function showToast(msg, type = 'success') {
         setToast({msg, type});
         setTimeout(() => setToast(null), 4500)
     }
 
-    // Get the enrolments for a specified unit
+    /**
+     * @function getEnrolments
+     * @async
+     * Get the enrolments for a specified unit from database, show a toast, and display enrolment data.
+     * If there is an error, display the error.
+     * @param {*} unitCode 
+     */
     async function getEnrolments(unitCode) {
         //Pass unit code to URL parameters
         const res = await fetch(`/api/admin/units/enrolments_students?unit=${unitCode}`, {method: 'GET'});
@@ -52,7 +73,11 @@ export default function enrolmentsPage() {
         }
     }
 
-    //Logout of the enrolments page and return to login page
+    /**
+     * @function handleLogout
+     * @async
+     * Log out of the enrolents page and return to login page
+     */
     async function handleLogout() {
         await fetch("/api/auth/logout", {method: "POST"});
         router.push("/");

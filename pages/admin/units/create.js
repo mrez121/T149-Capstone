@@ -6,7 +6,18 @@ import { useRouter } from 'next/router';
 import Head          from 'next/head';
 import Link          from 'next/link';
 
+/**
+ * @function CreateUnitPage
+ * Builds TeamUp's Create Unit page using react.js
+ * @returns Create Unit page HTML
+ */
 export default function CreateUnitPage() {
+  /**
+   * @const router
+   * @const form
+   * @const error
+   * @const loading
+   */
   const router = useRouter();
 
   // Form state with default constraint values
@@ -21,13 +32,21 @@ export default function CreateUnitPage() {
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Update form state when input changes
+  /**
+   * @function handleChange
+   * Update form state when input changes
+   * @param {*} e react event
+   */
   function handleChange(e) {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
   }
 
-  // Submit form to create unit
+  /**
+   * @function handleSubmit
+   * Submit the form to create a unit.
+   * @param {*} e react event
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');

@@ -6,9 +6,24 @@
 import { getDb }       from '../../../../lib/db';
 import { requireAuth } from '../../../../lib/session';
 
+/**
+ * @function handler
+ * This function handles HTTP requests related to unit IDs:
+ * GET    - get a single unit with its constraints
+ * PUT    - edit unit details and constraints
+ * DELETE - delete a unit
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
 
   // Check user is logged in and is an admin
+  /**
+   * @const student
+   * @const id
+   * @const db
+   */
   const student = requireAuth(req, res);
   if (!student) return;
   if (!student.isAdmin) return res.status(403).json({ error: 'Admin access required.' });

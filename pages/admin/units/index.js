@@ -6,13 +6,28 @@ import { useRouter }           from 'next/router';
 import Head                    from 'next/head';
 import Link                    from 'next/link';
 
+/**
+ * @function UnitsPage
+ * Builds the Units page for admin features using react.js
+ * @returns Units page HTML (if loading state = false) || Loading HTML (if loading state = true)
+ */
 export default function UnitsPage() {
+  /**
+   * @const router
+   * @const units
+   * @const loading
+   * @const toast
+   */
   const router = useRouter();
   const [units,   setUnits]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
 
-  // Fetch all units from the API on page load
+  /**
+   * @function loadUnits
+   * @async
+   * Fetch all units from the API on page load, set loading to false
+   */
   async function loadUnits() {
     const res = await fetch('/api/admin/units');
     if (res.status === 401) { router.push('/'); return; }
@@ -25,12 +40,23 @@ export default function UnitsPage() {
   useEffect(() => { loadUnits(); }, []);
 
   // Show a temporary notification message
+  /**
+   * @function showToast
+   * Show a temporary notification message
+   * @param {*} msg 
+   * @param {*} type 
+   */
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   }
 
-  // Delete a unit after confirmation
+  /**
+   * @function handleDelete
+   * Delete a unit after confirmation
+   * @param {*} unitId 
+   * @param {*} unitCode 
+   */
   async function handleDelete(unitId, unitCode) {
     if (!confirm(`Delete unit ${unitCode}? This cannot be undone.`)) return;
     const res  = await fetch(`/api/admin/units/${unitId}`, { method: 'DELETE' });

@@ -64,3 +64,13 @@ To wipe all groups and start fresh, run in MySQL Workbench:
    DELETE FROM invites WHERE id > 0;
    DELETE FROM group_members WHERE id > 0;
    DELETE FROM `groups` WHERE id > 0;
+
+## JSDOCS install for testing
+1. Install JSDocs globally on your system:
+   npm install -g jsdoc
+2. Change into the root folder if not already there:
+   cd T149-Capstone
+3. After editing any of the JSDocs comments, run the following command to regenerate the documentation
+   jsdoc -c docConfig.json
+4. After editing any of the Testing documents to document results, run the following command to regenerate test documentation
+   jsdoc -c testingDocConfig.json

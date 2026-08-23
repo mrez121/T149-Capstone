@@ -2,8 +2,27 @@
 import { getDb } from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 
-// Read-only endpoint for the Student Directory page.
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests for the Student Directory page.
+ * It is a read-only endpoint.
+ * GET - fetches student information for both the current user and other students from the database.
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
+  /**
+   * @const student
+   * @const db
+   * @const studentRows
+   * @const slotRows
+   * @const groupRows
+   * @const slotsByStudent
+   * @const groupsByStudent
+   * @const students
+   */
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed.' });
   }

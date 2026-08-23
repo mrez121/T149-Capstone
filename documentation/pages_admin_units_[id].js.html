@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/admin/units/[id].js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/admin/units/[id].js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// pages/admin/units/[id].js
+// Edit an existing unit's details and constraints
+
+import { useState, useEffect } from 'react';
+import { useRouter }           from 'next/router';
+import Head                    from 'next/head';
+import Link                    from 'next/link';
+
+/**
+ * @function EditUnitPage
+ * Builds TeamUp's edit unit page using react.js
+ * @returns Edit unit page HTML (if loading state = false) || loading HTML (if loading state= true)
+ */
+export default function EditUnitPage() {
+  /**
+   * @const router
+   * @const id
+   * @const form
+   * @const loading
+   * @const saving
+   * @const error
+   * @const toast
+   */
+  const router = useRouter();
+  const { id } = router.query;
+
+  // Form state
+  const [form, setForm] = useState({
+    unit_code: '',
+    unit_name: '',
+    semester:  '',
+    min_size:  4,
+    max_size:  5,
+    max_new:   2,
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState('');
+  const [toast,   setToast]   = useState(null);
+
+  // Load existing unit data when page loads
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/admin/units/${id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.unit) {
+          setForm({
+            unit_code: data.unit.unit_code,
+            unit_name: data.unit.unit_name,
+            semester:  data.unit.semester,
+            min_size:  data.unit.min_size ?? 4,
+            max_size:  data.unit.max_size ?? 5,
+            max_new:   data.unit.max_new  ?? 2,
+          });
+        }
+        setLoading(false);
+      });
+  }, [id]);
+
+  /**
+   * @function handleChange
+   * Update form state when input changes
+   * @param {*} e react event
+   */
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  }
+
+  /**
+   * @function showToast
+   * Show a temporary notification message
+   * @param {*} msg 
+   * @param {*} type 
+   */
+  function showToast(msg, type = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  /**
+   * @function handleSubmit
+   * @async
+   * Submit updated unit to the API
+   * @param {*} e react event
+   */
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+    setSaving(true);
+
+    const res = await fetch(`/api/admin/units/${id}`, {
+      method:  'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        unit_name: form.unit_name,
+        semester:  form.semester,
+        min_size:  Number(form.min_size),
+        max_size:  Number(form.max_size),
+        max_new:   Number(form.max_new),
+      }),
+    });
+    const data = await res.json();
+    setSaving(false);
+
+    if (res.ok) { showToast('Unit updated successfully.'); }
+    else        { setError(data.error || 'Failed to update unit.'); }
+  }
+
+  if (loading) return (
+    &lt;div style={{ background:'#0D1117', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'#8B949E' }}>
+      Loading...
+    &lt;/div>
+  );
+
+  return (
+    &lt;>
+      &lt;Head>&lt;title>TeamUp — Edit Unit&lt;/title>&lt;/Head>
+      {toast &amp;&amp; &lt;div className={`toast toast-${toast.type}`}>{toast.msg}&lt;/div>}
+
+      &lt;nav className="anav">
+        &lt;div className="anav-logo">Team&lt;span>Up&lt;/span> &lt;span className="admin-tag">Admin&lt;/span>&lt;/div>
+        &lt;Link href="/admin/units" className="anav-link">← Back to units&lt;/Link>
+      &lt;/nav>
+
+      &lt;div className="acontainer-sm">
+        &lt;h1 className="apage-title">Edit Unit&lt;/h1>
+        &lt;p className="apage-sub">Update unit details and group formation constraints&lt;/p>
+
+        &lt;form onSubmit={handleSubmit} className="aform-card">
+          {error &amp;&amp; &lt;div className="aerror-box">{error}&lt;/div>}
+
+          &lt;div className="asection-label">Unit Details&lt;/div>
+
+          {/* Unit code is read only */}
+          &lt;div className="afield">
+            &lt;label>Unit Code&lt;/label>
+            &lt;input name="unit_code" value={form.unit_code} disabled style={{opacity:.5, cursor:'not-allowed'}} />
+            &lt;span className="ahint">Unit code cannot be changed after creation&lt;/span>
+          &lt;/div>
+
+          &lt;div className="afield">
+            &lt;label>Unit Name&lt;/label>
+            &lt;input name="unit_name" value={form.unit_name} onChange={handleChange} required />
+          &lt;/div>
+
+          &lt;div className="afield">
+            &lt;label>Semester&lt;/label>
+            &lt;input name="semester" value={form.semester} onChange={handleChange} required />
+          &lt;/div>
+
+          &lt;div className="adivider" />
+
+          &lt;div className="asection-label">Group Formation Constraints&lt;/div>
+          &lt;p className="asection-desc">Changes apply to new groups only — existing groups are not affected.&lt;/p>
+
+          &lt;div className="afields-row">
+            &lt;div className="afield">
+              &lt;label>Min group size&lt;/label>
+              &lt;input type="number" name="min_size" value={form.min_size} onChange={handleChange} min={2} max={10} required />
+            &lt;/div>
+            &lt;div className="afield">
+              &lt;label>Max group size&lt;/label>
+              &lt;input type="number" name="max_size" value={form.max_size} onChange={handleChange} min={2} max={10} required />
+            &lt;/div>
+            &lt;div className="afield">
+              &lt;label>Max new students&lt;/label>
+              &lt;input type="number" name="max_new" value={form.max_new} onChange={handleChange} min={0} max={10} required />
+            &lt;/div>
+          &lt;/div>
+
+          &lt;div className="aconstraints-preview">
+            &lt;div className="apreview-label">Current constraints&lt;/div>
+            &lt;div className="apreview-tags">
+              &lt;span className="aconstraint-tag">👥 {form.min_size}–{form.max_size} members per group&lt;/span>
+              &lt;span className="aconstraint-tag">🎓 Max {form.max_new} new students per group&lt;/span>
+              &lt;span className="aconstraint-tag">🗓 1+ shared tutorial slot required&lt;/span>
+            &lt;/div>
+          &lt;/div>
+
+          &lt;div className="abtn-row">
+            &lt;button className="abtn abtn-blue" type="submit" disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            &lt;/button>
+            &lt;Link href="/admin/units" className="abtn abtn-ghost">Cancel&lt;/Link>
+          &lt;/div>
+        &lt;/form>
+      &lt;/div>
+
+      &lt;style jsx>{`
+        .toast { position:fixed; top:20px; right:20px; z-index:999; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:500; }
+        .toast-success { background:rgba(63,185,80,.15); border:1px solid rgba(63,185,80,.4); color:#3FB950; }
+        .toast-error   { background:rgba(248,81,73,.15); border:1px solid rgba(248,81,73,.4); color:#F85149; }
+        .anav { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid #30363D; background:#161B22; }
+        .anav-logo { font-size:20px; font-weight:700; color:#E6EDF3; display:flex; align-items:center; gap:10px; }
+        .anav-logo span { color:#00C9A7; }
+        .admin-tag { background:rgba(227,160,8,.15); color:#E3A008; border:1px solid rgba(227,160,8,.3); border-radius:6px; padding:2px 8px; font-size:12px; font-weight:600; }
+        .anav-link { color:#8B949E; text-decoration:none; font-size:14px; }
+        .anav-link:hover { color:#E6EDF3; }
+        .acontainer-sm { max-width:680px; margin:0 auto; padding:32px 24px; }
+        .apage-title { font-size:26px; font-weight:700; margin-bottom:4px; color:#E6EDF3; }
+        .apage-sub { font-size:14px; color:#8B949E; margin-bottom:28px; }
+        .aform-card { background:#161B22; border:1px solid #30363D; border-radius:12px; padding:28px; }
+        .aerror-box { background:rgba(248,81,73,.12); border:1px solid rgba(248,81,73,.3); border-radius:8px; padding:12px 14px; font-size:14px; color:#F85149; margin-bottom:20px; }
+        .asection-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#8B949E; margin-bottom:16px; }
+        .asection-desc { font-size:13px; color:#8B949E; margin-top:-10px; margin-bottom:16px; }
+        .afield { display:flex; flex-direction:column; gap:6px; margin-bottom:18px; }
+        .afield label { font-size:13px; font-weight:500; color:#C9D1D9; }
+        .afield input { background:#0D1117; border:1px solid #30363D; border-radius:8px; padding:10px 12px; font-size:14px; color:#E6EDF3; outline:none; transition:border-color .15s; }
+        .afield input:focus { border-color:#1D6FE8; }
+        .ahint { font-size:12px; color:#8B949E; }
+        .afields-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+        .adivider { border:none; border-top:1px solid #30363D; margin:24px 0; }
+        .aconstraints-preview { background:#0D1117; border:1px solid #30363D; border-radius:8px; padding:14px 16px; margin-bottom:24px; }
+        .apreview-label { font-size:12px; color:#8B949E; margin-bottom:10px; }
+        .apreview-tags { display:flex; gap:8px; flex-wrap:wrap; }
+        .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:4px 10px; font-size:12px; }
+        .abtn-row { display:flex; gap:12px; align-items:center; }
+        .abtn { padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; display:inline-block; }
+        .abtn-blue { background:#1D6FE8; color:white; }
+        .abtn-blue:hover:not(:disabled) { background:#1353B0; }
+        .abtn-blue:disabled { opacity:.6; cursor:not-allowed; }
+        .abtn-ghost { background:none; color:#8B949E; border:1px solid #30363D; }
+        .abtn-ghost:hover { color:#E6EDF3; border-color:#8B949E; }
+      `}&lt;/style>
+    &lt;/>
+  );
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#StudentDirectoryBuildsTeamUp'sstudentdirectorypageusingreact.js">StudentDirectoryBuilds TeamUp's student directory page using react.js</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#c">c</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#error">error</a></li><li><a href="global.html#existingInvite">existingInvite</a></li><li><a href="global.html#filterOptions">filterOptions</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleViewProfileOpentheprofilepagefortheselectedstudent.">handleViewProfileOpen the profile page for the selected student.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraintsDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraintsDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#inviteRows">inviteRows</a></li><li><a href="global.html#invitingId">invitingId</a></li><li><a href="global.html#isCreator">isCreator</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#newStudents">newStudents</a></li><li><a href="global.html#normalizedQuery">normalizedQuery</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pub:">pub:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#shared">shared</a></li><li><a href="global.html#sharedSlots">sharedSlots</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowashortfeedbackmessageafterinviteactionsorAPIerrors.">showToastShow a short feedback message after invite actions or API errors.</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#students">students</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#token">token</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Aug 23 2026 20:43:17 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -3,7 +3,27 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
+/**
+ * @default Dashboard
+ * Builds TeamUp Dashboard page using React.js
+ * @returns Dashboard HTML (if loading state = false) || Loading HTML (if loading state = true) 
+ */
 export default function Dashboard() {
+  
+  /**
+   * Constants related to page navigation and states.
+   * @constant Router:        Navigate to other pages
+   * @constant student:       (react state) Essentially the user's profile and information.
+   * @constant myGroup:       (react state) The group that the user is a part of
+   * @constant myMembers:     (react state) The other students that are in the user' group
+   * @constant mySlots:       (react state) The timeslots the user is available according to their database information
+   * @constant publicGroups:  (react state) The public groups that are available to browse
+   * @constant invites:       (react state) The invites from groups that have been sent to the user
+   * @constant groupType:     (react state) If a group is created by the user, it can be either public or private
+   * @constant inviteTarget:  (react state) The student that is being target by the user for an invite to the user's group
+   * @constant toast:         (react state) A reusable notification
+   * @constant loading:       (react state) A state that assists in page construction while data is being fetched.
+   */
   const router = useRouter();
   const [student, setStudent] = useState(null);
   const [myGroup, setMyGroup] = useState(null);
@@ -16,19 +36,31 @@ export default function Dashboard() {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load the dashboard state from both personal group data and public groups.
-  // This keeps the grouped and ungrouped dashboard views in sync after each action.
+  /**
+   * @function loadData
+   * @async
+   * Load the dashboard state from both personal group data and public groups.
+   * This keeps the grouped and ungrouped dashboard views in sync after each action.
+   * loading state defines page construction at the end of this function call, ensuring that any updates to data are reflected in the user's view.
+   */
   async function loadData() {
+    /**
+     * @const mineRes: The user's own/group information as received from the database
+     * @const pubRes:  The information about public groups that can be joined.
+     */
     const [mineRes, pubRes] = await Promise.all([
       fetch('/api/groups/mine'),
       fetch('/api/groups'),
     ]);
-
+    // Return to index page if there is an error retrieving user's information (such as it not existing)
     if (mineRes.status === 401) {
       router.push('/');
       return;
     }
-
+    /**
+     * @const mine: JSON form of mineRes to update various state values
+     * @const pub:  JSON form of pubRes to update publicGroup state value
+     */
     const mine = await mineRes.json();
     const pub = await pubRes.json();
 
@@ -41,35 +73,60 @@ export default function Dashboard() {
     setLoading(false);
   }
 
+  // Update the page using loadData function
   useEffect(() => {
     loadData();
   }, []);
 
-  // Reusable feedback helper for create, join, invite, lock and leave actions.
+  /**
+   * @function showToast
+   * A reusable feedback helper for create, join, invite, lock, and leave actions
+   * @param {*} msg:  A message to be displayed to the user
+   * @param {*} type: Determines the visual formatting of the toast displayed
+   */
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4500);
   }
 
-  // Live constraint checks used by both the status card and the active group panel.
+  
+  /**
+   * Live constraint checks used by both the status card and the active group panel.
+   * @const memberCount:  How many members are in the group
+   * @const newCount:     How many members of the group are new to QUT
+   * @const sizeOk:       Variable to check if memberCount is acceptable (either 4 or 5 students for IFB398/399)
+   * @const newOk:        Variable to check if newCount is accecptable (can only have up to 2 new students in IFB398/399)
+   * @const slotOk:       Variable to check if all members of the group have a shared availability slot
+   * @const allOk:        Variable to check if every constraint has been met by the group
+   * @const seatsNeeded:  How many additional members are needed for the sizeOk variable to become valid (feedback variable for user)
+   * @const openSeats:    How many spaces are available within the group up to the maximum group size for the unit (feedback variable for user)
+   */
   const memberCount = myMembers.length;
   const newCount = myMembers.filter((m) => m.is_new).length;
   const sizeOk = memberCount >= 4 && memberCount <= 5;
   const newOk = newCount <= 2;
   const slotOk = !!myGroup?.shared_slot;
   const allOk = sizeOk && newOk && slotOk;
-  // Separate minimum seats from total open seats so the UI can explain what is
-  // still required versus what capacity remains.
   const seatsNeeded = Math.max(0, 4 - memberCount);
   const openSeats = Math.max(0, 5 - memberCount);
 
-  // Only the group creator can send invitations or lock a forming group.
+  /**
+   * @const isCreator: Check to see if current user is the creator of the group they are in.
+   * Only the group creator can send invitations or lock a forming group.
+   */
   const isCreator =
     myGroup &&
     student &&
     myGroup.created_by === student.studentId;
 
-  // Create a new group for students who are not currently in one.
+  /**
+   * @function handleCreate
+   * @async
+   * Create a new group if the current user is not currently in a group.
+   * Adds a new group to the database with the current user's info, displays a toast, then reloads the data within the page.
+   * If an error occurs, display the error information as a toast
+   * @param {*} e: React event that triggers the function
+   */
   async function handleCreate(e) {
     e.preventDefault();
 
@@ -89,7 +146,14 @@ export default function Dashboard() {
     }
   }
 
-  // Join a public group directly from the available groups list.
+  /**
+   * @function handleJoin
+   * @async
+   * Join a public group directly from the available groups list.
+   * Adds the user to the specified group, displays a toast, then reloads the data within the page.
+   * If an error occurs, display the error information as a toast
+   * @param {*} groupId: The Id of the group fetched from the database
+   */
   async function handleJoin(groupId) {
     const res = await fetch('/api/groups/join', {
       method: 'POST',
@@ -107,7 +171,14 @@ export default function Dashboard() {
     }
   }
 
-  // Invite a student by ID from the active group action panel.
+  /**
+   * @function handleInviteStudent
+   * @async
+   * Invite a student by ID from the active group action panel.
+   * Creates an invite for the current group to the targeted user and adds it to the database, displays a toast, and resets the inviteTarget state.
+   * If an error occurs, display the error information as a toast
+   * @param {*} e: React event that triggers the function
+   */
   async function handleInviteStudent(e) {
     e.preventDefault();
 
@@ -131,6 +202,15 @@ export default function Dashboard() {
   }
 
   // Accept or decline an invitation shown in the pending invite banner.
+  /**
+   * @function handleRespondInvite
+   * @async
+   * Accept or decline an invitation shown in the pending invite banner.
+   * Gets the invite from the database and handles it according to the decision made by the user (accept or decline), displays a toast, then reloads the data within the page.
+   * If an error occurs, display the error information as a toast
+   * @param {*} inviteId: the Id of the invite that the user received.
+   * @param {*} action:   can be either "accept" or "decline" based on the button pressed by the user.
+   */
   async function handleRespondInvite(inviteId, action) {
     const res = await fetch('/api/groups/respond-invite', {
       method: 'POST',
@@ -152,7 +232,13 @@ export default function Dashboard() {
     }
   }
 
-  // Lock a group once all team-size, new-student and shared-slot rules pass.
+  /**
+   * @function handleLock
+   * @async
+   * Lock a group once all team-size, new-student, and shared-slot constraints pass.
+   * Changes the group's status in the database to "locked", shows a toast, then reloads the data within the page.
+   * If an error occurs, display a toast with the error information.
+   */
   async function handleLock() {
     const res = await fetch('/api/groups/lock', {
       method: 'POST',
@@ -170,7 +256,12 @@ export default function Dashboard() {
     }
   }
 
-  // Leave the current group after confirmation and then refresh dashboard data.
+  /**
+   * @function handleLeave
+   * @async
+   * Leave the current group after confirmation, update the database to reflect that the user has left, display a toast, and then refresh dashboard data.
+   * If an error occurs, display a toast with the error information.
+   */
   async function handleLeave() {
     if (!confirm('Are you sure you want to leave this group?')) {
       return;
@@ -190,7 +281,11 @@ export default function Dashboard() {
     }
   }
 
-  // End the session and return the user to the login page.
+  /**
+   * @function handleLogout
+   * @async
+   * End the session and return the user to the login page.
+   */
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
@@ -758,16 +853,8 @@ export default function Dashboard() {
 
                     <p className="muted">
                       Create a group and invite your
-                      teammates. Find other students to form a group with,
-                      or browse public groups below.
+                      teammates or browse public groups below.
                     </p>
-                    <button
-                        className="btn btn-teal"
-                        type="button"
-                        onClick={() => router.push('/students')}
-                      >
-                        Browse students
-                      </button>
                   </div>
                 </div>
 
