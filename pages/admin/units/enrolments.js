@@ -117,6 +117,7 @@ export default function enrolmentsPage() {
                     <div className="aunit-semester">{u.semester}</div>
                     <div className="aunit-actions">
                         <button className="abtn abtn-blue" onClick={() => getEnrolments(u.unit_code)}>{u.unit_code} Enrolments</button>
+                        <Link href={`/admin/units/${u.unit_code}/enrol`} className="abtn abtn-teal abtn-sm">Enrol student</Link>
                     </div>
                 </div>
             ))}

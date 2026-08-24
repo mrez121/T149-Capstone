@@ -8,7 +8,7 @@ import { requireAuth } from "../../../../lib/session";
  * @async
  * This function handles HTTP requests related to unit enrolments
  * GET      - gets the students enrolled in a unit
- * @todo PUT      - adds a student to the unit
+ * PUT      - adds a student to the unit
  * @todo DELETE   - removes a student from the unit
  * @param {*} req the HTTP request used to determine functionality
  * @param {*} res the HTTP response sent back to the calling page/function
@@ -44,6 +44,29 @@ export default async function handler(req, res) {
     if(req.method === 'PUT') {
         // Grab unit_id (e.g. IFB399) from url
         const unit = req.query.unit;
+        const {student_id, name, email, is_new, cohort} = req.body;
+
+        //Check unit exists
+        const [unitCheck] = await db.query('SELECT * FROM units WHERE unit_code = ?', unit);
+        if(!unitCheck.length) return res.status(404).json({error: 'Unit not found.'});
+
+        //Check student exists
+        const [studentCheck] = await db.query(
+            `SELECT s.student_id, s.name, s.email, s.is_new, s.cohort
+            FROM students s
+            WHERE student_id = ? AND name = ? AND email = ?`, 
+            [student_id, name, email]
+        );
+        console.log(studentCheck);
+        if(!studentCheck.length) return res.status(404).json({error: 'Student not found'});
+
+        //Update unit enrolment table
+        await db.query(
+            `UPDATE unit_enrolments SET student_id = ? WHERE unit_id = ?`,
+            [student_id, unit]
+        );
+
+        return res.status(200).json({ok: true});
     }
     //Throw an error if incorrect method included in request.
     return res.status(405).json({error: 'Failed to reach database'});
