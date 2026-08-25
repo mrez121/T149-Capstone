@@ -8,8 +8,8 @@ import Link                    from 'next/link';
 
 /**
  * @function EnrolStudentPage
- * --
- * 
+ * This function builds the enrol student page using react.js
+ * @returns Enrol Student page HTML (if loading state = false) || Loading HTML (if loading state = true)
  */
 export default function EnrolStudentPage() {
 
@@ -21,8 +21,6 @@ export default function EnrolStudentPage() {
         student_id: '',
         student_name: '',
         student_email: '',
-        student_isNew: '',
-        student_cohort: '',
     });
 
     const [loading, setLoading] = useState(false);
@@ -35,15 +33,13 @@ export default function EnrolStudentPage() {
      * @param {*} e react event
      */
     function handleChange(e) {
-        const target = e.target;
-        const name = target.name;
-        const value = target.type === 'checkbox' ? target.checked : target.value;
+        const {name, value} = e.target;
         setForm(f => ({...f, [name]: value}));
     }
 
     /**
      * @function showToast
-     * Show aa temporary notification message
+     * Show a temporary notification message
      * @param {*} msg 
      * @param {*} type 
      */
@@ -55,7 +51,6 @@ export default function EnrolStudentPage() {
     /**
      * @function handleSubmit
      * @async
-     * @todo
      * Submit student enrolment to API
      * @param {*} e react event
      */
@@ -65,21 +60,19 @@ export default function EnrolStudentPage() {
         setLoading(true);
 
         const res = await fetch(`/api/admin/units/enrolments_students?unit=${id}`, {
-            method: 'PUT',
+            method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 student_id: form.student_id,
                 name: form.student_name,
-                email: form.student_email,
-                is_new: form.student_isNew,
-                cohort: form.student_cohort,
+                email: form.student_email
             })
         });
         const data = await res.json();
         setLoading(false);
 
         if(res.ok) {
-            showToast('Student enrolled successfully.');
+            showToast(`Student enrolled to unit ${id} successfully.`);
         }
         else {
             setError(data.error || 'Failed to enrol student');
@@ -100,7 +93,7 @@ export default function EnrolStudentPage() {
 
             <nav className="anav">
                 <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
-                <Link href="/admin/units" className="anav-link">← Back to units</Link>
+                <Link href="/admin/units/enrolments" className="anav-link">← Back to enrolments</Link>
             </nav>
 
             <div className='acontainer-sm'>
@@ -124,16 +117,6 @@ export default function EnrolStudentPage() {
                     <div className='afield'>
                         <label>Student Email</label>
                         <input name="student_email" value={form.student_email} onChange={handleChange} required />
-                    </div>
-
-                    <div className='afield'>
-                        <label>Is the student new to QUT?</label>
-                        <input type='checkbox' name="student_isNew" checked={form.student_isNew} onChange={handleChange} />
-                    </div>
-
-                    <div className='afield'>
-                        <label>Student Cohort</label>
-                        <input name="student_cohort" value={form.student_cohort} onChange={handleChange} required />
                     </div>
 
                     <div className='abtn-row'>
