@@ -65,15 +65,15 @@ export default async function handler(req, res) {
         );
         if(!studentCheck.length) return res.status(404).json({error: 'Student not found.'});
 
-        //Check that the student isn't already enrolled
+        //Check that the student isn't already enrolled in a unit
         const [enrolmentCheck] = await db.query(
             `SELECT unit_id, student_id
             FROM unit_enrolments
-            WHERE unit_id = ? AND student_id = ?`,
-            [unit, student_id]
+            WHERE student_id = ?`,
+            [student_id]
         );
         if(enrolmentCheck.length) {
-            return res.status(400).json({error: `Student ${student_id} is already enrolled in ${unit}`});
+            return res.status(400).json({error: `Student ${student_id} is already enrolled in a unit`});
         }
 
         //Insert the student into unit_enrolment table
