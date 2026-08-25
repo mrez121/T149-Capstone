@@ -15,8 +15,8 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export default async function handler(req, res) {
   /**
-   * @const student
-   * @const db
+   * @const student the user's JWT containing their user information
+   * @const db the database system (currently specified in env.local)
    * @const groups
    * @const existing
    * @const type
@@ -28,6 +28,12 @@ export default async function handler(req, res) {
   if (!student) return;
 
   const db = getDb();
+  
+  const [studentUnit] = await db.query(`
+    SELECT id FROM unit_enrolments WHERE student_id = ?`,
+    [student.studentId]
+  );
+  console.log(studentUnit[0]);
 
   // GET — list public groups
   if (req.method === 'GET') {
@@ -38,9 +44,10 @@ export default async function handler(req, res) {
          JOIN students s2 ON s2.student_id = gm2.student_id
          WHERE gm2.group_id = g.group_id AND s2.is_new = 1) AS new_count
       FROM \`groups\` g
-      WHERE g.type = 'public' AND g.status = 'forming'
-      ORDER BY g.created_at DESC
-    `);
+      WHERE g.type = 'public' AND g.status = 'forming' AND g.unit_id = ?
+      ORDER BY g.created_at DESC`,
+      [studentUnit[0].id]
+  );
     return res.status(200).json({ groups });
   }
 
@@ -61,10 +68,11 @@ export default async function handler(req, res) {
     const [countRows] = await db.query('SELECT COUNT(*) as c FROM `groups`');
     const groupName   = `Group ${countRows[0].c + 1}`;
 
-    await db.query(
-      "INSERT INTO `groups` (group_id, name, type, status, created_by) VALUES (?, ?, ?, 'forming', ?)",
-      [groupId, groupName, type, student.studentId]
+    const createGroupResult = await db.query(
+      "INSERT INTO `groups` (group_id, name, type, status, created_by, unit_id) VALUES (?, ?, ?, 'forming', ?, ?)",
+      [groupId, groupName, type, student.studentId, studentUnit[0].id]
     );
+    console.log(createGroupResult);
     await db.query(
       'INSERT INTO group_members (group_id, student_id) VALUES (?, ?)',
       [groupId, student.studentId]
