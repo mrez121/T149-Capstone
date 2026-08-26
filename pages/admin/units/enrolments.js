@@ -12,7 +12,15 @@ import Link from "next/link";
  * @returns enrolments page HTML (if loading state = false) || loading HTML (if loading state = true)
  */
 export default function enrolmentsPage() {
-    //Router and states
+    /**
+     * @const router
+     * @const allUnits
+     * @const enrolments
+     * @const loading
+     * @const toast
+     * @const res
+     * @const data
+     */
     const router = useRouter();
     const [allUnits, setAllUnits] = useState([]);
     const [enrolments, setEnrolments] = useState([]);

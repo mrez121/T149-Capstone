@@ -17,6 +17,8 @@ export default function UnitsPage() {
    * @const units
    * @const loading
    * @const toast
+   * @const res
+   * @const data
    */
   const router = useRouter();
   const [units,   setUnits]   = useState([]);

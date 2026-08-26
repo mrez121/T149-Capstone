@@ -18,6 +18,14 @@ export default async function handler(req, res) {
     /**
      * @const admin
      * @const db
+     * @const unit
+     * @const enrolments
+     * @const student_id
+     * @const name
+     * @const email
+     * @const unitCheck
+     * @const studentCheck
+     * @const enrolmentCheck
      */
     const admin = requireAuth(req, res);
     if(!admin || !admin.isAdmin) {

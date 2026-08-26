@@ -13,9 +13,12 @@ import Link from 'next/link';
 export default function ManageGroupsPage() {
     /**
      * @const router
-     * @const unit
+     * @const allUnits
+     * @const groups
      * @const loading
      * @const toast
+     * @const res
+     * @const data
      */
     const router = useRouter();
     const [allUnits, setAllUnits] = useState([]);
@@ -57,6 +60,14 @@ export default function ManageGroupsPage() {
         setTimeout(() => setToast(null), 4000);
     }
 
+    /**
+     * @function getGroups
+     * @async
+     * Get the groups for a specified unit from the database, show a toast, and display group data.
+     * If there is an error, display the error in a toast
+     * @param {*} unitId the unit to get the group data for
+     * @param {*} unitCode the name of the unit for user readability purposes
+     */
     async function getGroups(unitId, unitCode) {
         // Pass unit id to URL parameters
         const res = await fetch(`/api/admin/units/groups?unit=${unitId}`, {method: 'GET'});
@@ -74,6 +85,14 @@ export default function ManageGroupsPage() {
         }
     }
 
+    /**
+     * @function unlockGroup
+     * @async
+     * Find the specified group in the database, unlock the group, then show a toast.
+     * If there is an error, display the error in a toast
+     * @param {*} groupId the ID of the group to be unlocked
+     * @param {*} groupName the name of the group for readability purposes
+     */
     async function unlockGroup(groupId, groupName) {
         //Pass group id to URL parameters
         const res = await fetch(`/api/admin/units/groups?groupId=${groupId}`, {method: 'POST'});
