@@ -12,7 +12,15 @@ import Link from "next/link";
  * @returns enrolments page HTML (if loading state = false) || loading HTML (if loading state = true)
  */
 export default function enrolmentsPage() {
-    //Router and states
+    /**
+     * @const router
+     * @const allUnits
+     * @const enrolments
+     * @const loading
+     * @const toast
+     * @const res
+     * @const data
+     */
     const router = useRouter();
     const [allUnits, setAllUnits] = useState([]);
     const [enrolments, setEnrolments] = useState([]);
@@ -76,7 +84,7 @@ export default function enrolmentsPage() {
     /**
      * @function handleLogout
      * @async
-     * Log out of the enrolents page and return to login page
+     * Log out of the enrolments page and return to login page
      */
     async function handleLogout() {
         await fetch("/api/auth/logout", {method: "POST"});

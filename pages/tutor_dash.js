@@ -155,27 +155,16 @@ export default function adminDashboard() {
                             className="btn-row"
                             style={{marginTop:20}}
                         >
-                            <button
+                            <Link
+                                href="/admin/units/manage_groups"
                                 className="btn btn-blue"
-                                onClick={() =>
-                                    showToast(
-                                        "View All Groups is still in development."
-                                    )
-                                }
+                                style={{
+                                    textDecoration:"none",
+                                    display:"inline-block"
+                                }}
                             >
-                                View All Groups
-                            </button>
-
-                            <button
-                                className="btn btn-teal"
-                                onClick={() =>
-                                    showToast(
-                                        "Manage Groups is still in development."
-                                    )
-                                }
-                            >
-                                Manage Groups
-                            </button>
+                                View and manage groups
+                            </Link>
                         </div>
                     </div>
 
