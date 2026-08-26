@@ -80,7 +80,6 @@ export default async function handler(req, res) {
       "INSERT INTO `groups` (group_id, name, type, status, created_by, unit_id) VALUES (?, ?, ?, 'forming', ?, ?)",
       [groupId, groupName, type, student.studentId, groupUnitId[0].id]
     );
-    console.log(createGroupResult);
     await db.query(
       'INSERT INTO group_members (group_id, student_id) VALUES (?, ?)',
       [groupId, student.studentId]
