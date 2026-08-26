@@ -155,6 +155,16 @@ export default function adminDashboard() {
                             className="btn-row"
                             style={{marginTop:20}}
                         >
+                            <Link
+                                href="/admin/units/manage_groups"
+                                className="btn btn-blue"
+                                style={{
+                                    textDecoration:"none",
+                                    display:"inline-block"
+                                }}
+                            >
+                                View and manage groups
+                            </Link>
                             <button
                                 className="btn btn-blue"
                                 onClick={() =>
