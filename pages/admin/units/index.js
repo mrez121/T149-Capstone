@@ -39,7 +39,6 @@ export default function UnitsPage() {
 
   useEffect(() => { loadUnits(); }, []);
 
-  // Show a temporary notification message
   /**
    * @function showToast
    * Show a temporary notification message

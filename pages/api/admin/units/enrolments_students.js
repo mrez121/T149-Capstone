@@ -1,5 +1,4 @@
 // pages/api/admin/units/enrolments_students.js
-// GET - students enrolled in a unit
 import { getDb } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/session";
 

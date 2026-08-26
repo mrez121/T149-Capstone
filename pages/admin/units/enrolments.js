@@ -76,7 +76,7 @@ export default function enrolmentsPage() {
     /**
      * @function handleLogout
      * @async
-     * Log out of the enrolents page and return to login page
+     * Log out of the enrolments page and return to login page
      */
     async function handleLogout() {
         await fetch("/api/auth/logout", {method: "POST"});
