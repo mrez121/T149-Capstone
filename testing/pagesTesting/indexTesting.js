@@ -20,7 +20,7 @@
  * 
  * FUNCTIONAL (black box) TEST #1
  * Tester name: Hongyun Wang
- * Date and time: 2026/8/26 19:33
+ * Date and time: 2026/8/26 19:40
  * Test results: PASS
  * GET / 304 in 1086ms (next.js: 1025ms, application-code: 61ms)
  * The TeamUp login page loaded successfully at GET /.
@@ -38,7 +38,7 @@
  * 
  * UNIT (white box) TEST #1
  * Tester name: Hongyun Wang
- * Date and time: 2026/8/26 19:40
+ * Date and time: 2026/8/26 19:47
  * Test results: PASS
  * Manual source code inspection was completed.
  * handleLogin prevents the default form submission, clears the previous error and sends the student ID and password to /api/auth/login in a JSON POST request.
@@ -47,7 +47,7 @@
  * 
  * FUNCTIONAL (black box) TEST #1
  * Tester name: Hongyun Wang
- * Date and time: 2026/8/26 19:40
+ * Date and time: 2026/8/26 19:58
  * Test results: PASS
  * POST /api/auth/login 401 in 3.0s (next.js: 2.9s, application-code: 182ms)
  * POST /api/auth/login 200 in 76ms (next.js: 1851µs, application-code: 74ms)
