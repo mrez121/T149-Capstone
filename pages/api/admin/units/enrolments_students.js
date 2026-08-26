@@ -58,12 +58,13 @@ export default async function handler(req, res) {
 
         //Check student exists
         const [studentCheck] = await db.query(
-            `SELECT s.student_id, s.name, s.email
+            `SELECT s.student_id, s.name, s.email, s.is_admin
             FROM students s
             WHERE student_id = ? AND name = ? AND email = ?`, 
             [student_id, name, email]
         );
         if(!studentCheck.length) return res.status(404).json({error: 'Student not found.'});
+        if(studentCheck[0].is_admin === 1) return res.status(403).json({error: 'Cannot enrol admin user.'});
 
         //Check that the student isn't already enrolled in a unit
         const [enrolmentCheck] = await db.query(

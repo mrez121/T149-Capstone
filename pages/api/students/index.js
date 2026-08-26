@@ -33,12 +33,29 @@ export default async function handler(req, res) {
   const db = getDb();
 
   // Return only public profile fields; password hashes and other private data
-  // must never be exposed to the directory UI.
+  // must never be exposed to the directory UI. Filter out admin users as they aren't students.
   const [studentRows] = await db.query(`
     SELECT student_id, name, email, is_new, cohort
     FROM students
+    WHERE is_admin != 1
     ORDER BY name ASC
   `);
+
+  // Get the current student's unit from the unit_enrolments table
+  const [studentUnit] = await db.query(`
+    SELECT unit_id FROM unit_enrolments WHERE student_id = ?`,
+    [student.studentId]
+  );
+  
+  // Get other students enrolled in the current student's unit
+  const [unitEnrolments] = await db.query(`
+    SELECT student_id FROM unit_enrolments WHERE unit_id = ?`,
+    [studentUnit[0].unit_id]
+  );
+
+  // Filter out students from the students table that are not enrolled in the current student's unit
+  const studentsInUnit = new Set(unitEnrolments.map(obj => obj.student_id));
+  const studentDirectory = studentRows.filter(obj => studentsInUnit.has(obj.student_id));
 
   // Availability and group membership are loaded separately, then merged below.
   // This keeps the SQL simple and gives the client one clean object per student.
@@ -68,7 +85,7 @@ export default async function handler(req, res) {
   );
 
   // Shape the database rows into the normalized response used by the directory cards.
-  const students = studentRows.map((row) => {
+  const students = studentDirectory.map((row) => {
     const group = groupsByStudent.get(row.student_id);
 
     return {

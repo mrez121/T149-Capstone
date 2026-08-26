@@ -17,25 +17,33 @@ export default async function handler(req, res) {
   /**
    * @const student the user's JWT containing their user information
    * @const db the database system (currently specified in env.local)
-   * @const groups
-   * @const existing
-   * @const type
-   * @const groupId
-   * @const countRows
-   * @const groupName
+   * @const studentUnit the user's unit based on which unit they're enrolled in from the database
+   * @const groupUnitId the id value of the unit in the database (for Foreign Key dependency in groups table)
+   * @const groups the list of available public groups that can be joined
+   * @const existing value to check if the user is already in a group when they try to make a new group
+   * @const type group type can be set to either public or private
+   * @const groupId unique id for the group when a new group is created
+   * @const countRows count of groups returned from DB (for group naming)
+   * @const groupName name of newly created group
    */
   const student = requireAuth(req, res);
   if (!student) return;
 
   const db = getDb();
   
+  // Get the current student's unit from the unit_enrolments table
   const [studentUnit] = await db.query(`
-    SELECT id FROM unit_enrolments WHERE student_id = ?`,
+    SELECT unit_id FROM unit_enrolments WHERE student_id = ?`,
     [student.studentId]
   );
-  console.log(studentUnit[0]);
 
-  // GET — list public groups
+  // Get the current student's unit id from the units table (needed for Foreign Key dependency)
+  const [groupUnitId] = await db.query(`
+    SELECT id from units WHERE unit_code = ?`,
+    [studentUnit[0].unit_id]
+  );
+
+  // GET — list public groups in the current user's unit
   if (req.method === 'GET') {
     const [groups] = await db.query(`
       SELECT g.*,
@@ -46,12 +54,12 @@ export default async function handler(req, res) {
       FROM \`groups\` g
       WHERE g.type = 'public' AND g.status = 'forming' AND g.unit_id = ?
       ORDER BY g.created_at DESC`,
-      [studentUnit[0].id]
+      [groupUnitId[0].id]
   );
     return res.status(200).json({ groups });
   }
 
-  // POST — create group
+  // POST — create group for the current user's unit (can be public or private)
   if (req.method === 'POST') {
     const [existing] = await db.query(
       'SELECT group_id FROM group_members WHERE student_id = ?',
@@ -70,7 +78,7 @@ export default async function handler(req, res) {
 
     const createGroupResult = await db.query(
       "INSERT INTO `groups` (group_id, name, type, status, created_by, unit_id) VALUES (?, ?, ?, 'forming', ?, ?)",
-      [groupId, groupName, type, student.studentId, studentUnit[0].id]
+      [groupId, groupName, type, student.studentId, groupUnitId[0].id]
     );
     console.log(createGroupResult);
     await db.query(
