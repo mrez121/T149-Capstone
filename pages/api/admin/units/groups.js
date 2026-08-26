@@ -4,6 +4,16 @@
 import { getDb } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/session";
 
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests for viewing and managing groups.
+ * GET - view all groups in a specified unit.
+ * @todo POST - unlock a locked group, allowing students to leave or join the group again.
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
 
     const admin = requireAuth(req, res);
@@ -24,9 +34,30 @@ export default async function handler(req, res) {
             unit
         );
         //Return success response and groups object
-        return res.status(201).json({groups});
+        return res.status(200).json({groups});
     }
 
+    //POST - unlock a locked group
+    if(req.method === 'POST') {
+        //grab group id (e.g. G-57BAC1) from url
+        const unit = req.query.groupId;
+        console.log(unit);
+        const [grpRows] = await db.query(
+            `SELECT * FROM \`groups\` WHERE group_id = ?`, unit
+        );
+        if(!grpRows.length) {
+            return res.status(404).json({error: 'Group not found.'});
+        }
+        if(grpRows[0].status !== 'locked') {
+            return res.status(400).json({error: `${grpRows[0].name} is already unlocked.`});
+        }
+
+        await db.query(
+            `UPDATE \`groups\` SET status = 'forming' WHERE group_id = ?`, grpRows[0].group_id 
+        );
+
+        return res.status(200).json({ok: true});
+    }
 
     //Throw an error if incorrect method included in request
     return res.status(405).json({error: 'Failed to reach database'});

@@ -74,6 +74,21 @@ export default function ManageGroupsPage() {
         }
     }
 
+    async function unlockGroup(groupId, groupName) {
+        //Pass group id to URL parameters
+        const res = await fetch(`/api/admin/units/groups?groupId=${groupId}`, {method: 'POST'});
+        const data = await res.json();
+
+        //Check if query was successful, throw an error if not
+        if(res.ok) {
+            //notification to show that group was successfully unlocked
+            showToast(`${groupName} successfully unlocked.`);
+        }
+        else {
+            showToast(data.error, 'error');
+        }
+    }
+
     /**
      * @function handleLogout
      * @async
@@ -140,6 +155,7 @@ export default function ManageGroupsPage() {
                         <div key = {e.group_id} className='aconstraints-row'>
                             <ul className='aempty-text'>
                                 <li>Group ID: {e.group_id}<p>Group Name: {e.name}, Status: {e.status}, Created by: {e.created_by}</p></li>
+                                <button className='abtn abtn-red' onClick={() => unlockGroup(e.group_id, e.name)}>Unlock group {e.name}</button>
                             </ul>
                         </div>
                     ))}

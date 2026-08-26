@@ -165,27 +165,6 @@ export default function adminDashboard() {
                             >
                                 View and manage groups
                             </Link>
-                            <button
-                                className="btn btn-blue"
-                                onClick={() =>
-                                    showToast(
-                                        "View All Groups is still in development."
-                                    )
-                                }
-                            >
-                                View All Groups
-                            </button>
-
-                            <button
-                                className="btn btn-teal"
-                                onClick={() =>
-                                    showToast(
-                                        "Manage Groups is still in development."
-                                    )
-                                }
-                            >
-                                Manage Groups
-                            </button>
                         </div>
                     </div>
 
