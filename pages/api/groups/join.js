@@ -3,7 +3,27 @@ import { getDb }       from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 import { findSharedSlots, getGroupMembers, validateJoin } from '../../../lib/constraints';
 
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests for joinging a public group
+ * POST - user joins a public group
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
+  /**
+   * @const student
+   * @const groupId
+   * @const db
+   * @const existing
+   * @const grpRows
+   * @const ok
+   * @const errors
+   * @const updatedMembers
+   * @const shared
+   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
   const student = requireAuth(req, res);

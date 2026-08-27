@@ -3,13 +3,32 @@ import { useState }  from 'react';
 import { useRouter } from 'next/router';
 import Head          from 'next/head';
 
+/**
+ * LoginPage
+ * Function that creates the login page for TeamUp
+ * @returns Login page HTML
+ */
 export default function LoginPage() {
+  /**
+   * @const router
+   * @const studentId
+   * @const password
+   * @const error
+   * @const loading
+   */
   const router = useRouter();
   const [studentId, setStudentId] = useState('');
   const [password,  setPassword]  = useState('');
   const [error,     setError]     = useState('');
   const [loading,   setLoading]   = useState(false);
 
+  /**
+   * @function handleLogin
+   * @async
+   * Handles the login event for the user. Fetches details from the database and
+   * redirects the user based on whether or not they are an admin.
+   * @param {*} e react event that triggers the function
+   */
   async function handleLogin(e) {
     e.preventDefault();
     setError('');

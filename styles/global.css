@@ -118,6 +118,10 @@ nav {
 }
 
 .logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
   padding: 9px 16px;
   color: var(--gray-light-A);
   background: transparent;
@@ -125,6 +129,8 @@ nav {
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
   transition:
     color 0.15s,
     border-color 0.15s,
@@ -932,6 +938,117 @@ nav {
   background: lch(from var(--red) l c h / 0.22);
 }
 
+/* Administrator buttons */
+
+.abtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 18px;
+  color: var(--gray-light-A);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+
+.abtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.abtn-sm {
+  min-height: 34px;
+  padding: 7px 13px;
+  font-size: 12px;
+}
+
+.abtn-blue {
+  color: #ffffff;
+  background: var(--blue);
+}
+
+.abtn-blue:hover:not(:disabled) {
+  background: var(--blue-variant);
+}
+
+.abtn-teal {
+  color: var(--teal);
+  background: lch(from var(--teal) l c h / 0.15);
+  border-color: lch(from var(--teal) l c h / 0.3);
+}
+
+.abtn-teal:hover:not(:disabled) {
+  background: lch(from var(--teal) l c h / 0.25);
+}
+
+.abtn-red {
+  color: var(--red);
+  background: lch(from var(--red) l c h / 0.12);
+  border-color: lch(from var(--red) l c h / 0.3);
+}
+
+.abtn-red:hover:not(:disabled) {
+  background: lch(from var(--red) l c h / 0.22);
+}
+
+.abtn-ghost,
+.anav-button {
+  color: var(--gray-mid-A);
+  background: var(--std-background);
+  border-color: var(--gray-dark-A);
+}
+
+.abtn-ghost:hover:not(:disabled),
+.anav-button:hover {
+  color: var(--gray-light-A);
+  background: var(--std-cmpt-background);
+  border-color: var(--gray-mid-A);
+}
+
+.anav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 9px 16px;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.anav.anav {
+  gap: 12px;
+}
+
+.anav .anav-button {
+  margin-left: auto;
+}
+
+.abtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* Inputs */
 
 .text-input,
@@ -1381,6 +1498,8 @@ nav {
 /* Keyboard accessibility */
 
 .btn:focus-visible,
+.abtn:focus-visible,
+.anav-button:focus-visible,
 .logout-btn:focus-visible,
 .directory-nav-link:focus-visible,
 .directory-filter:focus-visible,
@@ -1541,6 +1660,24 @@ nav {
 }
 
 @media (max-width: 520px) {
+  .anav.anav {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .anav-logo.anav-logo {
+    gap: 6px;
+    font-size: 18px;
+  }
+
+  .anav-button,
+  .logout-btn {
+    min-height: 34px;
+    padding: 7px 10px;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
   .nav-name {
     display: none;
   }

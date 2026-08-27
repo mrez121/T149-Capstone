@@ -3,8 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
-// Keep the directory filter values and labels in one shared place so the
-// toolbar and filter logic stay consistent.
+/**
+ * @const filterOptions
+ * Keeps the directory filter values and labels in one shared place so the 
+ * toolbar and filter logic stay consistent
+ */
 const filterOptions = [
   { value: 'all', label: 'All students' },
   { value: 'available', label: 'Available' },
@@ -13,7 +16,23 @@ const filterOptions = [
   { value: 'returning', label: 'Returning' },
 ];
 
+/**
+ * @function StudentDirectory
+ * Builds TeamUp's student directory page using react.js
+ * @returns Student Directory HTML (if loading state = false) || loading html (if loading state = true)
+ */
 export default function StudentDirectory() {
+  /**
+   * @const router
+   * @const student
+   * @const students
+   * @const myGroup
+   * @const query
+   * @const filter
+   * @const toast
+   * @const loading
+   * @const invitingId
+   */
   const router = useRouter();
   const [student, setStudent] = useState(null);
   const [students, setStudents] = useState([]);
@@ -26,6 +45,13 @@ export default function StudentDirectory() {
 
   // Load the current student, the full directory, and the user's group state.
   // Both directory and group data are needed before invite buttons can be shown safely.
+  /**
+   * @function loadData
+   * @async
+   * Load the current student, the full directory, and the user's group state.
+   * Both directory and group data are needed before invite buttons can be shown safely.
+   * 
+   */
   async function loadData() {
     const [directoryRes, mineRes] = await Promise.all([
       fetch('/api/students'),
@@ -50,24 +76,43 @@ export default function StudentDirectory() {
     loadData();
   }, []);
 
-  // Show a short feedback message after invite actions or API errors.
+  /**
+   * @function showToast
+   * Show a short feedback message after invite actions or API errors.
+   * @param {*} msg 
+   * @param {*} type 
+   */
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4500);
   }
 
-  // End the current session and return the user to the login page.
+  /**
+   * @function handleLogout
+   * @async
+   * End the current session and return the user to the login page.
+   */
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
   }
 
-  // Open the profile page for the selected student.
+  /**
+   * @function handleViewProfile
+   * Open the profile page for the selected student.
+   * @param {*} targetStudentId 
+   */
   function handleViewProfile(targetStudentId) {
     router.push(`/students/${targetStudentId}`);
   }
 
-  // Send an invite from the creator's current group to an available classmate.
+  /**
+   * @function handleInvite
+   * @async
+   * Send an invite from the creator's current group to an available student.
+   * @param {*} targetStudentId 
+   * @returns 
+   */
   async function handleInvite(targetStudentId) {
     if (!myGroup) return;
 
@@ -92,14 +137,22 @@ export default function StudentDirectory() {
     }
   }
 
-  // Only the creator of a forming group can invite students from the directory.
+  /**
+   * @const isCreator - only the creator of a forming group can invite students from the directory
+   */
   const isCreator =
     myGroup &&
     student &&
     myGroup.created_by === student.studentId &&
     myGroup.status === 'forming';
 
-  // Pre-calculate summary numbers for the cards above the directory results.
+  /**
+   * Pre-calculate summary numbers for the cards above the directory results
+   * @const stats
+   * @const available
+   * @const inGroups
+   * @const newStudents
+   */
   const stats = useMemo(() => {
     const available = students.filter((item) => !item.group).length;
     const inGroups = students.length - available;
@@ -115,6 +168,11 @@ export default function StudentDirectory() {
 
   // Apply the search text and selected filter locally because the demo directory
   // data set is small and this keeps the UI responsive while typing.
+  /**
+   * Apply the search text and selected filter
+   * @const filteredStudents
+   * @const normalizedQuery
+   */
   const filteredStudents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 

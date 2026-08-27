@@ -3,7 +3,29 @@ import { getDb }       from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 import { findSharedSlots, getGroupMembers, validateJoin } from '../../../lib/constraints';
 
+/**
+ * @function handler
+ * @async
+ * This function handles the HTTP requests for responding to invites
+ * POST - accept or decline an invite from a group
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
+  /**
+   * @const student
+   * @const inviteId
+   * @const action
+   * @const db
+   * @const invRows
+   * @const groupId
+   * @const existing
+   * @const ok
+   * @const errors
+   * @const updatedMembers
+   * @const shared
+   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
   const student = requireAuth(req, res);

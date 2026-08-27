@@ -3,7 +3,20 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 
+/**
+ * @function StudentProfile
+ * Constructs the Student Profile page using react.js
+ * @returns Student Profile HTML (if loading state = false & no errors) || Loading HTML (if loading state = true) || Error html (if errors or no profile)
+ */
 export default function StudentProfile() {
+  /**
+   * @const router
+   * @const studentId
+   * @const currentStudent
+   * @const profile
+   * @const loading
+   * @const error
+   */
   const router = useRouter();
   const { studentId } = router.query;
 
@@ -15,7 +28,12 @@ export default function StudentProfile() {
   useEffect(() => {
     if (!router.isReady) return;
 
-    // Fetches all students and selects the profile matching the URL.
+    /**
+     * @function loadStudentProfile
+     * Fetches all students and selects the profile matching the URL.
+     * If unable to find or load a student's profile, throw an error.
+     * @returns router.push to login if user is not a student
+     */
     async function loadStudentProfile() {
       try {
         const res = await fetch('/api/students');
@@ -59,13 +77,23 @@ export default function StudentProfile() {
     loadStudentProfile();
   }, [router.isReady, studentId]);
 
-  // Ends the current session and returns the user to the login page.
+  /**
+   * @function handleLogout
+   * @async
+   * Ends the current session and returns the user to the login page
+   */
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/');
   }
 
   // Converts database values such as "forming" into readable labels.
+  /**
+   * @function formatLabel
+   * Converts database values such as "forming" into readable labels
+   * @param {*} value - a database value
+   * @returns Formatted value || 'Not provided'
+   */
   function formatLabel(value) {
     if (!value) return 'Not provided';
 

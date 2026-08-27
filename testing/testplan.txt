@@ -1,0 +1,7 @@
+T149 test plan
+Sprint 5 - Demo video for project owner by Mehdi (Brandon to assist if needed)
+Sprints 5 and 6 - unit testing by Brandon, Hongyun, and Weiyi
+Sprints 7 and 8 - functional testing by Brandon, Hongyun, and Weiyi
+Sprints 9 and 10 - user testing by capstone teaching team and all team members/random users
+Sprints 11 - 13 - acceptance testing in preparation for handover
+

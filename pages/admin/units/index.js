@@ -6,13 +6,30 @@ import { useRouter }           from 'next/router';
 import Head                    from 'next/head';
 import Link                    from 'next/link';
 
+/**
+ * @function UnitsPage
+ * Builds the Units page for admin features using react.js
+ * @returns Units page HTML (if loading state = false) || Loading HTML (if loading state = true)
+ */
 export default function UnitsPage() {
+  /**
+   * @const router
+   * @const units
+   * @const loading
+   * @const toast
+   * @const res
+   * @const data
+   */
   const router = useRouter();
   const [units,   setUnits]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast,   setToast]   = useState(null);
 
-  // Fetch all units from the API on page load
+  /**
+   * @function loadUnits
+   * @async
+   * Fetch all units from the API on page load, set loading to false
+   */
   async function loadUnits() {
     const res = await fetch('/api/admin/units');
     if (res.status === 401) { router.push('/'); return; }
@@ -24,13 +41,23 @@ export default function UnitsPage() {
 
   useEffect(() => { loadUnits(); }, []);
 
-  // Show a temporary notification message
+  /**
+   * @function showToast
+   * Show a temporary notification message
+   * @param {*} msg 
+   * @param {*} type 
+   */
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   }
 
-  // Delete a unit after confirmation
+  /**
+   * @function handleDelete
+   * Delete a unit after confirmation
+   * @param {*} unitId 
+   * @param {*} unitCode 
+   */
   async function handleDelete(unitId, unitCode) {
     if (!confirm(`Delete unit ${unitCode}? This cannot be undone.`)) return;
     const res  = await fetch(`/api/admin/units/${unitId}`, { method: 'DELETE' });
@@ -52,7 +79,7 @@ export default function UnitsPage() {
 
       <nav className="anav">
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
-        <Link href="/tutor_dash" className="anav-link">← Dashboard</Link>
+        <Link href="/tutor_dash" className="anav-link anav-button">← Dashboard</Link>
       </nav>
 
       <div className="acontainer">
@@ -121,14 +148,6 @@ export default function UnitsPage() {
         .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:3px 10px; font-size:12px; }
         .aunit-stats { display:flex; gap:16px; font-size:13px; color:#8B949E; margin-top:4px; }
         .aunit-actions { display:flex; gap:8px; margin-top:8px; }
-        .abtn { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; display:inline-block; }
-        .abtn-sm { padding:6px 14px; font-size:12px; }
-        .abtn-blue { background:#1D6FE8; color:white; }
-        .abtn-blue:hover { background:#1353B0; }
-        .abtn-teal { background:rgba(0,201,167,.15); color:#00C9A7; border:1px solid rgba(0,201,167,.3); }
-        .abtn-teal:hover { background:rgba(0,201,167,.25); }
-        .abtn-red { background:rgba(248,81,73,.12); color:#F85149; border:1px solid rgba(248,81,73,.3); }
-        .abtn-red:hover { background:rgba(248,81,73,.22); }
       `}</style>
     </>
   );

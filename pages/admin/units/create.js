@@ -6,7 +6,18 @@ import { useRouter } from 'next/router';
 import Head          from 'next/head';
 import Link          from 'next/link';
 
+/**
+ * @function CreateUnitPage
+ * Builds TeamUp's Create Unit page using react.js
+ * @returns Create Unit page HTML
+ */
 export default function CreateUnitPage() {
+  /**
+   * @const router
+   * @const form
+   * @const error
+   * @const loading
+   */
   const router = useRouter();
 
   // Form state with default constraint values
@@ -21,13 +32,21 @@ export default function CreateUnitPage() {
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Update form state when input changes
+  /**
+   * @function handleChange
+   * Update form state when input changes
+   * @param {*} e react event
+   */
   function handleChange(e) {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
   }
 
-  // Submit form to create unit
+  /**
+   * @function handleSubmit
+   * Submit the form to create a unit.
+   * @param {*} e react event
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
@@ -56,7 +75,7 @@ export default function CreateUnitPage() {
 
       <nav className="anav">
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
-        <Link href="/admin/units" className="anav-link">← Back to units</Link>
+        <Link href="/admin/units" className="anav-link anav-button">← Back to units</Link>
       </nav>
 
       <div className="acontainer-sm">
@@ -149,12 +168,6 @@ export default function CreateUnitPage() {
         .apreview-tags { display:flex; gap:8px; flex-wrap:wrap; }
         .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:4px 10px; font-size:12px; }
         .abtn-row { display:flex; gap:12px; align-items:center; }
-        .abtn { padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; display:inline-block; }
-        .abtn-blue { background:#1D6FE8; color:white; }
-        .abtn-blue:hover:not(:disabled) { background:#1353B0; }
-        .abtn-blue:disabled { opacity:.6; cursor:not-allowed; }
-        .abtn-ghost { background:none; color:#8B949E; border:1px solid #30363D; }
-        .abtn-ghost:hover { color:#E6EDF3; border-color:#8B949E; }
       `}</style>
     </>
   );

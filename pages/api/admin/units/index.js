@@ -5,9 +5,33 @@
 import { getDb }       from '../../../../lib/db';
 import { requireAuth } from '../../../../lib/session';
 
+/**
+ * @function handler
+ * @async
+ * This function handles API requests for units
+ * GET  - list all units with constraints and student/group counts
+ * POST - create a new unit and set its constraints
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
 
   // Check user is logged in and is an admin
+  /**
+   * @const student
+   * @const db
+   * @const units
+   * @const unit_code
+   * @const unit_name
+   * @const semester
+   * @const min_size
+   * @const max_size
+   * @const max_new
+   * @const existing
+   * @const result
+   * @const unitId 
+   */
   const student = requireAuth(req, res);
   if (!student) return;
   if (!student.isAdmin) return res.status(403).json({ error: 'Admin access required.' });
@@ -19,7 +43,7 @@ export default async function handler(req, res) {
     const [units] = await db.query(`
       SELECT u.*,
         uc.min_size, uc.max_size, uc.max_new,
-        (SELECT COUNT(*) FROM unit_enrolments WHERE unit_id = u.id) AS student_count,
+        (SELECT COUNT(*) FROM unit_enrolments WHERE unit_id = u.unit_code) AS student_count,
         (SELECT COUNT(*) FROM \`groups\` WHERE unit_id = u.id) AS group_count
       FROM units u
       LEFT JOIN unit_constraints uc ON uc.unit_id = u.id

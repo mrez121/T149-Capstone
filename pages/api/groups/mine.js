@@ -2,7 +2,25 @@
 import { getDb }       from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests for the current user's group information
+ * GET - gets the current user's group information
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
 export default async function handler(req, res) {
+  /**
+   * @const student
+   * @const db
+   * @const grpRows
+   * @var members
+   * @const memberRows
+   * @const slotRows
+   * @const inviteRows
+   */
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed.' });
 
   const student = requireAuth(req, res);
