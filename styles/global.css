@@ -74,6 +74,16 @@ select {
   border: 1px solid lch(from var(--red) l c h / 0.4);
 }
 
+.dashboard-error {
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  color: var(--red);
+  background: lch(from var(--red) l c h / 0.12);
+  border: 1px solid lch(from var(--red) l c h / 0.35);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
 /* Navigation bar */
 
 nav {

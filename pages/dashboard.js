@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [groupType, setGroupType] = useState('public');
   const [inviteTarget, setInviteTarget] = useState('');
   const [toast, setToast] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
 
   /**
@@ -44,33 +45,55 @@ export default function Dashboard() {
    * loading state defines page construction at the end of this function call, ensuring that any updates to data are reflected in the user's view.
    */
   async function loadData() {
-    /**
-     * @const mineRes: The user's own/group information as received from the database
-     * @const pubRes:  The information about public groups that can be joined.
-     */
-    const [mineRes, pubRes] = await Promise.all([
-      fetch('/api/groups/mine'),
-      fetch('/api/groups'),
-    ]);
-    // Return to index page if there is an error retrieving user's information (such as it not existing)
-    if (mineRes.status === 401) {
-      router.push('/');
-      return;
-    }
-    /**
-     * @const mine: JSON form of mineRes to update various state values
-     * @const pub:  JSON form of pubRes to update publicGroup state value
-     */
-    const mine = await mineRes.json();
-    const pub = await pubRes.json();
+    setLoadError('');
 
-    setStudent(mine.student || null);
-    setMyGroup(mine.group || null);
-    setMyMembers(mine.members || []);
-    setMySlots(mine.slots || []);
-    setInvites(mine.invites || []);
-    setPublicGroups(pub.groups || []);
-    setLoading(false);
+    try {
+      /**
+       * @const mineRes: The user's own/group information as received from the database
+       * @const pubRes:  The information about public groups that can be joined.
+       */
+      const [mineRes, pubRes] = await Promise.all([
+        fetch('/api/groups/mine'),
+        fetch('/api/groups'),
+      ]);
+
+      // Return to the login page when the session is no longer valid.
+      if (mineRes.status === 401 || pubRes.status === 401) {
+        router.push('/');
+        return;
+      }
+
+      if (!mineRes.ok) {
+        throw new Error('Unable to load your student and group information.');
+      }
+
+      const mine = await mineRes.json();
+
+      setStudent(mine.student || null);
+      setMyGroup(mine.group || null);
+      setMyMembers(mine.members || []);
+      setMySlots(mine.slots || []);
+      setInvites(mine.invites || []);
+
+      // Keep the dashboard usable when the public-groups API fails, including
+      // when the student has not yet been enrolled in a unit.
+      if (!pubRes.ok) {
+        setPublicGroups([]);
+        setLoadError(
+          'Public groups could not be loaded. Ask an administrator to confirm your unit enrolment.'
+        );
+        return;
+      }
+
+      const pub = await pubRes.json();
+      setPublicGroups(pub.groups || []);
+    } catch (error) {
+      setLoadError(
+        error.message || 'Dashboard data could not be loaded. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Update the page using loadData function
@@ -359,6 +382,12 @@ export default function Dashboard() {
         <p className="page-subtitle">
           Manage your availability, group and team requirements.
         </p>
+
+        {loadError && (
+          <div className="dashboard-error" role="alert">
+            {loadError}
+          </div>
+        )}
 
         {/* Student Directory entry point for both grouped and ungrouped students. */}
         <div className="directory-entry-card">
