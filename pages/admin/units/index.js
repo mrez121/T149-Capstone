@@ -79,7 +79,7 @@ export default function UnitsPage() {
 
       <nav className="anav">
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
-        <Link href="/tutor_dash" className="anav-link">← Dashboard</Link>
+        <Link href="/tutor_dash" className="anav-link anav-button">← Dashboard</Link>
       </nav>
 
       <div className="acontainer">
@@ -148,14 +148,6 @@ export default function UnitsPage() {
         .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:3px 10px; font-size:12px; }
         .aunit-stats { display:flex; gap:16px; font-size:13px; color:#8B949E; margin-top:4px; }
         .aunit-actions { display:flex; gap:8px; margin-top:8px; }
-        .abtn { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; display:inline-block; }
-        .abtn-sm { padding:6px 14px; font-size:12px; }
-        .abtn-blue { background:#1D6FE8; color:white; }
-        .abtn-blue:hover { background:#1353B0; }
-        .abtn-teal { background:rgba(0,201,167,.15); color:#00C9A7; border:1px solid rgba(0,201,167,.3); }
-        .abtn-teal:hover { background:rgba(0,201,167,.25); }
-        .abtn-red { background:rgba(248,81,73,.12); color:#F85149; border:1px solid rgba(248,81,73,.3); }
-        .abtn-red:hover { background:rgba(248,81,73,.22); }
       `}</style>
     </>
   );
