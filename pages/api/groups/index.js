@@ -36,6 +36,9 @@ export default async function handler(req, res) {
     SELECT unit_id FROM unit_enrolments WHERE student_id = ?`,
     [student.studentId]
   );
+  if(!studentUnit[0].unit_id) {
+    return res.status(400).json({error: 'Student is not enrolled in a unit.'});
+  }
 
   // Get the current student's unit id from the units table (needed for Foreign Key dependency)
   const [groupUnitId] = await db.query(`

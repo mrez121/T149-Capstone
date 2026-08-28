@@ -46,6 +46,9 @@ export default async function handler(req, res) {
     SELECT unit_id FROM unit_enrolments WHERE student_id = ?`,
     [student.studentId]
   );
+  if(!studentUnit[0]) {
+    return res.status(400).json({error: 'Student is not enrolled in a unit.'});
+  }
   
   // Get other students enrolled in the current student's unit
   const [unitEnrolments] = await db.query(`
