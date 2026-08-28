@@ -58,8 +58,8 @@ export default function StudentDirectory() {
       fetch('/api/groups/mine'),
     ]);
 
-    if (directoryRes.status === 401 || mineRes.status === 401) {
-      router.push('/');
+    if (directoryRes.status === 400 || mineRes.status === 401) {
+      router.push('/dashboard');
       return;
     }
 
