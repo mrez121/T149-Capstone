@@ -76,12 +76,12 @@ export default async function handler(req, res) {
     );
 
     // Insert constraints using the new unit ID
-    const unitId = result.insertId;
+    
     await db.query(
       'INSERT INTO unit_constraints (unit_id, min_size, max_size, max_new) VALUES (?, ?, ?, ?)',
-      [unitId, min_size, max_size, max_new]
+      [unit_code, min_size, max_size, max_new]
     );
-
+    const unitId = result.insertId;
     return res.status(201).json({ ok: true, unitId, unit_code: unit_code.toUpperCase() });
   }
 
