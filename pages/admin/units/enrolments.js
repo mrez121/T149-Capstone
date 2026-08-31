@@ -145,6 +145,7 @@ export default function enrolmentsPage() {
                   <button className="abtn abtn-blue" onClick={() => getEnrolments(u.unit_code)}>{u.unit_code} Enrolments</button>
                   <Link href={`/admin/units/${u.unit_code}/enrol`} className="abtn abtn-teal abtn-sm">Enrol student</Link>
                   <Link href={`/admin/units/${u.unit_code}/unenrol`} className="abtn abtn-red abtn-sm">Unenrol student</Link>
+                  <Link href="/admin/units/csv-upload" className="abtn abtn-teal">📂 Upload CSV</Link>
                 </div>
               </div>
             ))}
