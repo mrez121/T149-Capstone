@@ -8,7 +8,7 @@ import { requireAuth } from "../../../../lib/session";
  * This function handles HTTP requests related to unit enrolments
  * GET      - gets the students enrolled in a unit
  * POST      - adds a student to the unit
- * DELETE   - removes a student from the unit
+ * @todo DELETE   - removes a student from the unit
  * @param {*} req the HTTP request used to determine functionality
  * @param {*} res the HTTP response sent back to the calling page/function
  * @returns a response status code and json object.
@@ -112,6 +112,9 @@ export default async function handler(req, res) {
             [student_id, name, email]
         );
         if(!studentCheck.length) return res.status(404).json({error: 'Student not found.'});
+
+        //If student is in a group, check that the group is locked, unlock if needed,
+        //remove the student from the group and transfer ownership of the group to the next student.
 
         // Delete student from unit_enrolments table
         await db.query(
