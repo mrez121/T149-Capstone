@@ -100,9 +100,9 @@ export default async function handler(req, res) {
         //Grab student details from submitted form
         const {student_id, name, email} = req.body;
 
-        // Check unit exists
+        // Check unit exists and that the student is enrolled in the unit
         const [unitCheck] = await db.query('SELECT * FROM units WHERE unit_code = ?', unit);
-        if(!unitCheck.length) return res.status(404).json({error: 'Unit not found.'});
+        if(!unitCheck.length) return res.status(404).json({error: 'Student not enrolled in unit.'});
 
         // Check student exists
         const [studentCheck] = await db.query(
@@ -114,7 +114,51 @@ export default async function handler(req, res) {
         if(!studentCheck.length) return res.status(404).json({error: 'Student not found.'});
 
         //If student is in a group, check that the group is locked, unlock if needed,
-        //remove the student from the group and transfer ownership of the group to the next student.
+        //remove the student from the group and transfer ownership of the group to the next student if needed.
+        //Delete the group if the student is the only group member in the group.
+        const [groupCheck] = await db.query(
+            `SELECT group_id FROM group_members WHERE student_id = ?`, [student_id]
+        );
+        if(groupCheck.length) {
+            const [groupDetail] = await db.query(
+                `SELECT * FROM \`groups\` WHERE group_id = ?`, [groupCheck[0].group_id]
+            );
+            console.log(groupDetail);
+            if(groupDetail[0].status === 'locked') {
+                await db.query(`UPDATE \`groups\` SET status = ? WHERE group_id = ?`, ["forming", groupDetail[0].group_id]);
+            }
+            if(groupDetail[0].created_by === student_id) {
+                console.log('DEBUGGING: created_by check was true');
+                const[groupMembers] = await db.query(
+                    `SELECT student_id
+                    FROM group_members
+                    WHERE group_id = ?
+                    ORDER BY joined_at`,
+                    groupCheck[0].group_id
+                );
+                console.log(groupMembers);
+                console.log(groupMembers.length === 1);
+                console.log(groupMembers.length > 1);
+                if(groupMembers.length === 1) {
+                    console.log("DEBUGGING: groupMembers.length === 1 check passed");
+                    await db.query(
+                        `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
+                    );
+                    await db.query(
+                        `DELETE FROM \`groups\` WHERE group_id = ?`, [groupDetail[0].group_id]
+                    );
+                }
+                if(groupMembers.length > 1) {
+                    const updateResult = await db.query(
+                        `UPDATE \`groups\` SET created_by = ? WHERE group_id = ?`, [groupDetail[0].group_id, groupMembers[1]]
+                    );
+                    console.log(updateResult);
+                    await db.query(
+                        `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
+                    );
+                }
+            }
+        }
 
         // Delete student from unit_enrolments table
         await db.query(
