@@ -1,10 +1,12 @@
 // pages/admin/units/manage_groups
 // Lists all groups within a unit with the option to unlock a group
 
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useRef} from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
+
+const SELECTED_UNIT_KEY = 'teamup.admin.manageGroups.unitId';
 /**
  * @function ManageGroupsPage
  * Builds the Manage Groups page using react.js
@@ -26,25 +28,59 @@ export default function ManageGroupsPage() {
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
+    const [loadingGroups, setLoadingGroups] = useState(false);
+    const [unlockingGroupId, setUnlockingGroupId] = useState(null);
+    const groupsRequestRef = useRef(false);
+    const unlockRequestRef = useRef(null);
+    const toastTimerRef = useRef(null);
+
+    useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
     /**
      * @function loadUnits
      * @async
-     * Fetch all units from the API on page load, set loading to false
+     * Fetch available units and restore the saved unit's groups on page load.
+     * If no saved unit is available, load the only unit automatically when there is one.
+     * Display request errors in a toast and clear loading when the request finishes.
      */
     async function loadUnits() {
-        const res = await fetch('/api/admin/units');
-        if(res.status === 401) {
-            router.push('/');
-            return;
+        try {
+            const res = await fetch('/api/admin/units');
+            if(res.status === 401) {
+                router.push('/');
+                return;
+            }
+            if(res.status === 403) {
+                router.push('/tutor_dash');
+                return;
+            }
+            const data = await res.json();
+            if (!res.ok) {
+                showToast(data.error || 'Failed to load units. Please reload the page.', 'error');
+                return;
+            }
+
+            const units = data.units || [];
+            setAllUnits(units);
+
+            let savedUnitId = null;
+            try {
+                savedUnitId = sessionStorage.getItem(SELECTED_UNIT_KEY);
+            } catch {
+                // Loading groups must still work when browser storage is unavailable.
+            }
+            const unitToLoad = units.find(unit => String(unit.id) === savedUnitId)
+                || (units.length === 1 ? units[0] : null);
+            if (unitToLoad) {
+                await getGroups(unitToLoad.id, unitToLoad.unit_code, false);
+            }
         }
-        if(res.status === 403) {
-            router.push('/tutor_dash');
-            return;
+        catch {
+            showToast('Unable to load units. Please reload the page.', 'error');
         }
-        const data = await res.json();
-        setAllUnits(data.units || []);
-        setLoading(false);
+        finally {
+            setLoading(false);
+        }
     }
 
     //Load content
@@ -52,61 +88,93 @@ export default function ManageGroupsPage() {
 
     /**
      * @function showToast
-     * Show a temporary notification message
+     * Show a notification for four seconds, replacing the previous notification timer.
      * @param {*} msg
      * @param {*} type
      */
     function showToast(msg, type = 'success') {
+        clearTimeout(toastTimerRef.current);
         setToast({msg, type});
-        setTimeout(() => setToast(null), 4000);
+        toastTimerRef.current = setTimeout(() => setToast(null), 4000);
     }
 
     /**
      * @function getGroups
      * @async
-     * Get the groups for a specified unit from the database, show a toast, and display group data.
+     * Fetch and display a unit's groups, then remember the unit for page refreshes.
+     * Show a success toast for manual queries; automatic restoration stays quiet.
      * If there is an error, display the error in a toast
      * @param {*} unitId the unit to get the group data for
      * @param {*} unitCode the name of the unit for user readability purposes
+     * @param {boolean} notify whether to show a successful manual-query notification
      */
-    async function getGroups(unitId, unitCode) {
-        // Pass unit id to URL parameters
-        const res = await fetch(`/api/admin/units/groups?unit=${unitId}`, {method: 'GET'});
-        const data = await res.json();
+    async function getGroups(unitId, unitCode, notify = true) {
+        // Keep an older list response from overwriting a completed unlock.
+        if (groupsRequestRef.current || unlockRequestRef.current !== null) return;
+        groupsRequestRef.current = true;
+        setLoadingGroups(true);
 
-        // Check if the query was successful, throw an error if not
-        if(res.ok) {
-            //Notification to show that data was successfully grabbed
-            showToast(`${unitCode} groups fetched.`);
-            //Store groups in state
+        try {
+            const res = await fetch(`/api/admin/units/groups?unit=${encodeURIComponent(unitId)}`, {method: 'GET'});
+            const data = await res.json();
+            if (!res.ok) {
+                showToast(data.error || 'Failed to load groups. Please try again.', 'error');
+                return;
+            }
+
             setGroups(data.groups);
             setSelectedUnit(unitCode);
+            try {
+                sessionStorage.setItem(SELECTED_UNIT_KEY, String(unitId));
+            } catch {
+                // The current results remain usable without remembering the selection.
+            }
+            if (notify) showToast(`${unitCode} groups fetched.`);
         }
-        else {
-            showToast(data.error, 'error');
+        catch {
+            showToast('Unable to load groups. Please try again.', 'error');
+        }
+        finally {
+            groupsRequestRef.current = false;
+            setLoadingGroups(false);
         }
     }
 
     /**
      * @function unlockGroup
      * @async
-     * Find the specified group in the database, unlock the group, then show a toast.
-     * If there is an error, display the error in a toast
+     * Unlock a locked group and update its displayed status after API success.
+     * Prevent duplicate requests and restore the action after a failed request.
      * @param {*} groupId the ID of the group to be unlocked
      * @param {*} groupName the name of the group for readability purposes
      */
     async function unlockGroup(groupId, groupName) {
-        //Pass group id to URL parameters
-        const res = await fetch(`/api/admin/units/groups?groupId=${groupId}`, {method: 'POST'});
-        const data = await res.json();
+        const group = groups.find(item => item.group_id === groupId);
+        if (unlockRequestRef.current !== null || groupsRequestRef.current || group?.status !== 'locked') return;
 
-        //Check if query was successful, throw an error if not
-        if(res.ok) {
-            //notification to show that group was successfully unlocked
+        // The ref also guards clicks before React renders the disabled button.
+        unlockRequestRef.current = groupId;
+        setUnlockingGroupId(groupId);
+
+        try {
+            const res = await fetch(`/api/admin/units/groups?groupId=${encodeURIComponent(groupId)}`, {method: 'POST'});
+            const data = await res.json();
+            if (!res.ok || !data.ok) {
+                showToast(data.error || 'Failed to unlock the group. Please try again.', 'error');
+                return;
+            }
+
+            setGroups(current => current.map(item =>
+                item.group_id === groupId ? {...item, status: 'forming'} : item
+            ));
             showToast(`${groupName} successfully unlocked.`);
         }
-        else {
-            showToast(data.error, 'error');
+        catch {
+            showToast('Unable to unlock the group. Please try again.', 'error');
+        }
+        finally {
+            unlockRequestRef.current = null;
+            setUnlockingGroupId(null);
         }
     }
 
@@ -131,7 +199,7 @@ export default function ManageGroupsPage() {
     return (
         <>
             <Head><title>TeamUp - Manage Groups</title></Head>
-            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+            {toast && <div className={`toast toast-${toast.type}`} role={toast.type === 'error' ? 'alert' : 'status'}>{toast.msg}</div>}
 
             <nav className='anav'>
                 <div className='anav-logo'>Team<span>Up</span> <span className='admin-tag'>Admin</span></div>
@@ -173,7 +241,7 @@ export default function ManageGroupsPage() {
                                         <span>📁 {u.group_count || 0} groups</span>
                                     </div>
                                     <div className='aunit-actions'>
-                                        <button className='abtn abtn-blue' onClick={() => getGroups(u.id, u.unit_code)}>{u.unit_code} Groups</button>
+                                        <button className='abtn abtn-blue' disabled={loadingGroups || unlockingGroupId !== null} onClick={() => getGroups(u.id, u.unit_code)}>{u.unit_code} Groups</button>
                                     </div>
                                 </div>
                             ))}
@@ -187,7 +255,7 @@ export default function ManageGroupsPage() {
                         <div>
                             <h2 className='asection-title'>Group Results</h2>
                             <p className='asection-sub'>
-                                {selectedUnit ? `Groups in ${selectedUnit}` : 'Select a unit above to view its groups'}
+                                {loadingGroups ? 'Loading groups...' : selectedUnit ? `Groups in ${selectedUnit}` : 'Select a unit above to view its groups'}
                             </p>
                         </div>
                     </div>
@@ -196,7 +264,7 @@ export default function ManageGroupsPage() {
                         <div className='aempty aempty-panel aempty-compact'>
                             <div className='aempty-icon'>📁</div>
                             <div className='aempty-text'>
-                                {selectedUnit ? `No groups are available in ${selectedUnit}` : 'No groups selected'}
+                                {loadingGroups ? 'Loading groups...' : selectedUnit ? `No groups are available in ${selectedUnit}` : 'Select a unit above to view its groups'}
                             </div>
                         </div>
                     ) : (
@@ -214,7 +282,14 @@ export default function ManageGroupsPage() {
                                         <span>Created by</span>
                                         <strong>{e.created_by}</strong>
                                     </div>
-                                    <button className='abtn abtn-red' onClick={() => unlockGroup(e.group_id, e.name)}>Unlock group</button>
+                                    <button
+                                        className={`abtn ${e.status === 'locked' ? 'abtn-red' : 'abtn-ghost'}`}
+                                        disabled={e.status !== 'locked' || unlockingGroupId !== null || loadingGroups}
+                                        aria-busy={unlockingGroupId === e.group_id}
+                                        onClick={() => unlockGroup(e.group_id, e.name)}
+                                    >
+                                        {unlockingGroupId === e.group_id ? 'Unlocking...' : e.status === 'locked' ? 'Unlock group' : 'Unlocked'}
+                                    </button>
                                 </div>
                             ))}
                         </div>
