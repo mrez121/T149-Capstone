@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   // Return only public profile fields; password hashes and other private data
   // must never be exposed to the directory UI. Filter out admin users as they aren't students.
   const [studentRows] = await db.query(`
-    SELECT student_id, name, email, is_new, cohort
+    SELECT student_id, teamup_id, name, email, is_new, cohort
     FROM students
     WHERE is_admin != 1
     ORDER BY name ASC
@@ -93,6 +93,7 @@ export default async function handler(req, res) {
 
     return {
       studentId: row.student_id,
+      teamupId: row.teamup_id,
       name: row.name,
       email: row.email,
       isNew: Boolean(row.is_new),

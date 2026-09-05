@@ -51,15 +51,15 @@ export default function StudentProfile() {
 
         setCurrentStudent(data.student || null);
 
-        const routeStudentId = Array.isArray(studentId)
+        const routeTeamupId = Array.isArray(studentId)
           ? studentId[0]
           : studentId;
 
         // Finds the student whose ID matches the dynamic route parameter.
         const selectedStudent = (data.students || []).find(
           (item) =>
-            item.studentId.toLowerCase() ===
-            routeStudentId.toLowerCase()
+            item.teamupId.toLowerCase() ===
+            routeTeamupId.toLowerCase()
         );
 
         if (!selectedStudent) {
@@ -150,7 +150,7 @@ export default function StudentProfile() {
         <div className="nav-right">
           {currentStudent && (
             <span className="nav-name">
-              {currentStudent.name}
+              {currentStudent.name} - {currentStudent.teamupId}
 
               <span
                 className={`badge ${
@@ -227,7 +227,7 @@ export default function StudentProfile() {
                 )}
               </div>
 
-              <p>{profile.studentId}</p>
+              <p>{profile.teamupId}</p>
             </div>
 
             <span
@@ -243,8 +243,8 @@ export default function StudentProfile() {
 
           <div className="directory-detail-list profile-detail-list">
             <div>
-              <span>Student ID</span>
-              <strong>{profile.studentId}</strong>
+              <span>TeamUp ID</span>
+              <strong>{profile.teamupId}</strong>
             </div>
 
             <div>

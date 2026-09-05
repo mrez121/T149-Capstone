@@ -100,30 +100,30 @@ export default function StudentDirectory() {
   /**
    * @function handleViewProfile
    * Open the profile page for the selected student.
-   * @param {*} targetStudentId 
+   * @param {*} targetTeamupId 
    */
-  function handleViewProfile(targetStudentId) {
-    router.push(`/students/${targetStudentId}`);
+  function handleViewProfile(targetTeamupId) {
+    router.push(`/students/${targetTeamupId}`);
   }
 
   /**
    * @function handleInvite
    * @async
    * Send an invite from the creator's current group to an available student.
-   * @param {*} targetStudentId 
+   * @param {*} targetTeamUpId 
    * @returns 
    */
-  async function handleInvite(targetStudentId) {
+  async function handleInvite(targetTeamUpId) {
     if (!myGroup) return;
 
-    setInvitingId(targetStudentId);
+    setInvitingId(targetTeamUpId);
 
     const res = await fetch('/api/groups/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         groupId: myGroup.group_id,
-        targetStudentId,
+        targetTeamUpId,
       }),
     });
 
@@ -179,7 +179,7 @@ export default function StudentDirectory() {
     return students.filter((item) => {
       const searchable = [
         item.name,
-        item.studentId,
+        item.teamupId,
         item.email,
         item.cohort,
         ...item.slots,
@@ -409,7 +409,7 @@ export default function StudentDirectory() {
                           )}
                         </div>
 
-                        <p>{item.studentId}</p>
+                        <p>{item.teamupId}</p>
                       </div>
 
                       <span
@@ -456,7 +456,7 @@ export default function StudentDirectory() {
                           type="button"
                           className="btn btn-teal btn-sm"
                           onClick={() =>
-                            handleViewProfile(item.studentId)
+                            handleViewProfile(item.teamupId)
                           }
                         >
                           View profile
@@ -467,13 +467,13 @@ export default function StudentDirectory() {
                             type="button"
                             className="btn btn-blue btn-sm"
                             disabled={
-                              invitingId === item.studentId
+                              invitingId === item.teamupId
                             }
                             onClick={() =>
-                              handleInvite(item.studentId)
+                              handleInvite(item.teamupId)
                             }
                           >
-                            {invitingId === item.studentId
+                            {invitingId === item.teamupId
                               ? 'Sending...'
                               : 'Invite'}
                           </button>
