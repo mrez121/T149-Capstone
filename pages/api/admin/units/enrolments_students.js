@@ -123,12 +123,10 @@ export default async function handler(req, res) {
             const [groupDetail] = await db.query(
                 `SELECT * FROM \`groups\` WHERE group_id = ?`, [groupCheck[0].group_id]
             );
-            console.log(groupDetail);
             if(groupDetail[0].status === 'locked') {
                 await db.query(`UPDATE \`groups\` SET status = ? WHERE group_id = ?`, ["forming", groupDetail[0].group_id]);
             }
             if(groupDetail[0].created_by === student_id) {
-                console.log('DEBUGGING: created_by check was true');
                 const[groupMembers] = await db.query(
                     `SELECT student_id
                     FROM group_members
@@ -136,11 +134,7 @@ export default async function handler(req, res) {
                     ORDER BY joined_at`,
                     groupCheck[0].group_id
                 );
-                console.log(groupMembers);
-                console.log(groupMembers.length === 1);
-                console.log(groupMembers.length > 1);
                 if(groupMembers.length === 1) {
-                    console.log("DEBUGGING: groupMembers.length === 1 check passed");
                     await db.query(
                         `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
                     );
@@ -149,10 +143,9 @@ export default async function handler(req, res) {
                     );
                 }
                 if(groupMembers.length > 1) {
-                    const updateResult = await db.query(
-                        `UPDATE \`groups\` SET created_by = ? WHERE group_id = ?`, [groupDetail[0].group_id, groupMembers[1]]
+                    await db.query(
+                        `UPDATE \`groups\` SET created_by = ? WHERE group_id = ?`, [groupMembers[1].student_id, groupDetail[0].group_id]
                     );
-                    console.log(updateResult);
                     await db.query(
                         `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
                     );
