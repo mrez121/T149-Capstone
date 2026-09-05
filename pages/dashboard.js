@@ -13,21 +13,23 @@ export default function Dashboard() {
   /**
    * Constants related to page navigation and states.
    * @constant Router:        Navigate to other pages
-   * @constant student:       (react state) Essentially the user's profile and information.
-   * @constant myGroup:       (react state) The group that the user is a part of
-   * @constant myMembers:     (react state) The other students that are in the user' group
-   * @constant mySlots:       (react state) The timeslots the user is available according to their database information
-   * @constant publicGroups:  (react state) The public groups that are available to browse
-   * @constant invites:       (react state) The invites from groups that have been sent to the user
-   * @constant groupType:     (react state) If a group is created by the user, it can be either public or private
-   * @constant inviteTarget:  (react state) The student that is being target by the user for an invite to the user's group
-   * @constant toast:         (react state) A reusable notification
-   * @constant loading:       (react state) A state that assists in page construction while data is being fetched.
+   * @constant student:             (react state) Essentially the user's profile and information.
+   * @constant myGroup:             (react state) The group that the user is a part of
+   * @constant myMembers:           (react state) The other students that are in the user' group
+   * @constant myGroupConstraints:  (react state) The constraints for the unit to be applied to the group
+   * @constant mySlots:             (react state) The timeslots the user is available according to their database information
+   * @constant publicGroups:        (react state) The public groups that are available to browse
+   * @constant invites:             (react state) The invites from groups that have been sent to the user
+   * @constant groupType:           (react state) If a group is created by the user, it can be either public or private
+   * @constant inviteTarget:        (react state) The student that is being target by the user for an invite to the user's group
+   * @constant toast:               (react state) A reusable notification
+   * @constant loading:             (react state) A state that assists in page construction while data is being fetched.
    */
   const router = useRouter();
   const [student, setStudent] = useState(null);
   const [myGroup, setMyGroup] = useState(null);
   const [myMembers, setMyMembers] = useState([]);
+  const [myGroupConstraints, setMyGroupConstraints] = useState([]);
   const [mySlots, setMySlots] = useState([]);
   const [publicGroups, setPublicGroups] = useState([]);
   const [invites, setInvites] = useState([]);
@@ -68,10 +70,10 @@ export default function Dashboard() {
       }
 
       const mine = await mineRes.json();
-
       setStudent(mine.student || null);
       setMyGroup(mine.group || null);
       setMyMembers(mine.members || []);
+      setMyGroupConstraints(mine.groupConstraints || []);
       setMySlots(mine.slots || []);
       setInvites(mine.invites || []);
 
@@ -117,8 +119,8 @@ export default function Dashboard() {
    * Live constraint checks used by both the status card and the active group panel.
    * @const memberCount:  How many members are in the group
    * @const newCount:     How many members of the group are new to QUT
-   * @const sizeOk:       Variable to check if memberCount is acceptable (either 4 or 5 students for IFB398/399)
-   * @const newOk:        Variable to check if newCount is accecptable (can only have up to 2 new students in IFB398/399)
+   * @const sizeOk:       Variable to check if memberCount is acceptable
+   * @const newOk:        Variable to check if newCount is accecptable
    * @const slotOk:       Variable to check if all members of the group have a shared availability slot
    * @const allOk:        Variable to check if every constraint has been met by the group
    * @const seatsNeeded:  How many additional members are needed for the sizeOk variable to become valid (feedback variable for user)
@@ -126,12 +128,12 @@ export default function Dashboard() {
    */
   const memberCount = myMembers.length;
   const newCount = myMembers.filter((m) => m.is_new).length;
-  const sizeOk = memberCount >= 4 && memberCount <= 5;
-  const newOk = newCount <= 2;
+  const sizeOk = memberCount >= myGroupConstraints.min_size && memberCount <= myGroupConstraints.max_size;
+  const newOk = newCount <= myGroupConstraints.max_new;
   const slotOk = !!myGroup?.shared_slot;
   const allOk = sizeOk && newOk && slotOk;
-  const seatsNeeded = Math.max(0, 4 - memberCount);
-  const openSeats = Math.max(0, 5 - memberCount);
+  const seatsNeeded = Math.max(0, myGroupConstraints.min_size - memberCount);
+  const openSeats = Math.max(0, myGroupConstraints.max_size - memberCount);
 
   /**
    * @const isCreator: Check to see if current user is the creator of the group they are in.
@@ -497,7 +499,7 @@ export default function Dashboard() {
                   </span>
 
                   <span className="cv">
-                    {memberCount} / 4–5 members
+                    {memberCount} / {myGroupConstraints.min_size}–{myGroupConstraints.max_size} members
                   </span>
                 </div>
 
@@ -511,7 +513,7 @@ export default function Dashboard() {
                   </span>
 
                   <span className="cv">
-                    {newCount} / max 2
+                    {newCount} / max {myGroupConstraints.max_new}
                   </span>
                 </div>
 
@@ -551,13 +553,13 @@ export default function Dashboard() {
               <>
                 <div className="constraint-row c-info">
                   <span>👥 Team size</span>
-                  <span className="cv">4–5 members</span>
+                  <span className="cv">{myGroupConstraints.min_size}–{myGroupConstraints.max_size} members</span>
                 </div>
 
                 <div className="constraint-row c-info">
                   <span>🎓 New students</span>
                   <span className="cv">
-                    Max 2 per group
+                    Max {myGroupConstraints.max_new} per group
                   </span>
                 </div>
 
@@ -649,7 +651,7 @@ export default function Dashboard() {
                       }`}
                     >
                       <span>Team size</span>
-                      <strong>{memberCount}/5</strong>
+                      <strong>{memberCount}/{myGroupConstraints.max_size}</strong>
                     </div>
 
                     <div
@@ -658,7 +660,7 @@ export default function Dashboard() {
                       }`}
                     >
                       <span>New students</span>
-                      <strong>{newCount}/2</strong>
+                      <strong>{newCount}/{myGroupConstraints.max_new}</strong>
                     </div>
 
                     <div
@@ -680,14 +682,13 @@ export default function Dashboard() {
                       </div>
 
                       <p>
-                        {memberCount} member{memberCount === 1 ? '' : 's'}
-                        joined, {openSeats} seat
+                        {memberCount} member{memberCount === 1 ? '' : 's'} joined, {openSeats} seat
                         {openSeats === 1 ? '' : 's'} still open.
                       </p>
                     </div>
 
                     <span className="group-seat-count">
-                      {memberCount}/5 filled
+                      {memberCount}/{myGroupConstraints.max_size} filled
                     </span>
                   </div>
 
@@ -767,7 +768,7 @@ export default function Dashboard() {
                         }`}
                       >
                         <span>Team size</span>
-                        <strong>{memberCount}/4 minimum</strong>
+                        <strong>{memberCount}/{myGroupConstraints.min_size} minimum</strong>
                       </div>
 
                       <div
@@ -776,7 +777,7 @@ export default function Dashboard() {
                         }`}
                       >
                         <span>New-student limit</span>
-                        <strong>{newCount}/2 used</strong>
+                        <strong>{newCount}/{myGroupConstraints.max_new} new students</strong>
                       </div>
 
                       <div
@@ -1000,22 +1001,22 @@ export default function Dashboard() {
 
                         <span
                           className={
-                            group.member_count >= 4
+                            group.member_count >= myGroupConstraints.min_size
                               ? 'warn'
                               : 'ok'
                           }
                         >
-                          👥 {group.member_count}/5 members
+                          👥 {group.member_count}/{myGroupConstraints.max_size} members
                         </span>
 
                         <span
                           className={
-                            group.new_count >= 2
+                            group.new_count >= myGroupConstraints.max_new
                               ? 'warn'
                               : 'ok'
                           }
                         >
-                          🎓 {group.new_count}/2 new
+                          🎓 {group.new_count}/{myGroupConstraints.max_new} new
                         </span>
 
                         {group.shared_slot && (
