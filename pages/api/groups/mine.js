@@ -45,6 +45,13 @@ export default async function handler(req, res) {
     members = memberRows;
   }
 
+  const [unit] = await db.query(`
+    SELECT unit_id FROM unit_enrolments WHERE student_id = ?`, student.studentId
+  );
+  const [unitConstraints] = await db.query(`
+    SELECT * FROM unit_constraints WHERE unit_id = ?`, unit[0].unit_id
+  );
+
   const [slotRows] = await db.query(
     'SELECT slot FROM availability WHERE student_id = ? ORDER BY slot',
     [student.studentId]
@@ -62,6 +69,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     group:   grpRows[0] || null,
     members,
+    groupConstraints: unitConstraints[0] || null,
     slots:   slotRows.map(r => r.slot),
     student,
     invites: inviteRows,
