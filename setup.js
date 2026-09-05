@@ -2,6 +2,7 @@ const readline = require('readline');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const uuidv4 = require('uuid');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
@@ -39,14 +40,14 @@ async function setup() {
 
   await conn.query('CREATE DATABASE IF NOT EXISTS teamup');
   await conn.query('USE teamup');
-  await conn.query(`CREATE TABLE IF NOT EXISTS students (id INT AUTO_INCREMENT PRIMARY KEY, student_id VARCHAR(20) UNIQUE NOT NULL, name VARCHAR(100) NOT NULL, email VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, is_new TINYINT DEFAULT 0, cohort VARCHAR(10) NOT NULL, is_admin TINYINT DEFAULT 0)`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS students (id INT AUTO_INCREMENT PRIMARY KEY, student_id VARCHAR(20) UNIQUE NOT NULL, teamup_id VARCHAR(20) UNIQUE NOT NULL, name VARCHAR(100) NOT NULL, email VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL, is_new TINYINT DEFAULT 0, cohort VARCHAR(10) NOT NULL, is_admin TINYINT DEFAULT 0)`);
   await conn.query(`CREATE TABLE IF NOT EXISTS availability (id INT AUTO_INCREMENT PRIMARY KEY, student_id VARCHAR(20) NOT NULL, slot VARCHAR(20) NOT NULL, FOREIGN KEY (student_id) REFERENCES students(student_id))`);
   await conn.query(`CREATE TABLE IF NOT EXISTS units(id INT AUTO_INCREMENT PRIMARY KEY, unit_code VARCHAR(20) UNIQUE NOT NULL, unit_name VARCHAR(100) NOT NULL, semester VARCHAR(20) NOT NULL, created_by VARCHAR(20) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (created_by) REFERENCES students(student_id))`);
-  await conn.query(`CREATE TABLE IF NOT EXISTS \`groups\` (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) UNIQUE NOT NULL, name VARCHAR(100) NOT NULL, type ENUM('public','private') DEFAULT 'public', status ENUM('forming','locked') DEFAULT 'forming', shared_slot VARCHAR(20), created_by VARCHAR(20) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, unit_id INT DEFAULT NULL, FOREIGN KEY (created_by) REFERENCES students(student_id), FOREIGN KEY (unit_id) REFERENCES units(id))`);
-  await conn.query(`CREATE TABLE IF NOT EXISTS group_members (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) NOT NULL, student_id VARCHAR(20) NOT NULL, joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_member (group_id, student_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id), FOREIGN KEY (student_id) REFERENCES students(student_id))`);
-  await conn.query(`CREATE TABLE IF NOT EXISTS invites (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) NOT NULL, from_student_id VARCHAR(20) NOT NULL, to_student_id VARCHAR(20) NOT NULL, status ENUM('pending','accepted','declined') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_invite (group_id, to_student_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id), FOREIGN KEY (from_student_id) REFERENCES students(student_id),FOREIGN KEY (to_student_id) REFERENCES students(student_id))`);
-  await conn.query(`CREATE TABLE IF NOT EXISTS unit_constraints(id INT AUTO_INCREMENT PRIMARY KEY, unit_id VARCHAR(20) NOT NULL, min_size INT DEFAULT 4, max_size  INT DEFAULT 5, max_new INT DEFAULT 2, FOREIGN KEY (unit_id) REFERENCES units(unit_code))`);
-  await conn.query(`CREATE TABLE IF NOT EXISTS unit_enrolments(id INT AUTO_INCREMENT PRIMARY KEY, unit_id VARCHAR(20) NOT NULL,student_id VARCHAR(20) NOT NULL, FOREIGN KEY (unit_id) REFERENCES units(unit_code), FOREIGN KEY (student_id) REFERENCES students(student_id))`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS \`groups\` (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) UNIQUE NOT NULL, name VARCHAR(100) NOT NULL, type ENUM('public','private') DEFAULT 'public', status ENUM('forming','locked') DEFAULT 'forming', shared_slot VARCHAR(20), created_by VARCHAR(20) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, unit_id INT DEFAULT NULL, FOREIGN KEY (created_by) REFERENCES students(student_id), FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE)`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS group_members (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) NOT NULL, student_id VARCHAR(20) NOT NULL, joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_member (group_id, student_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id) ON DELETE CASCADE, FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE)`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS invites (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20) NOT NULL, from_student_id VARCHAR(20) NOT NULL, to_student_id VARCHAR(20) NOT NULL, status ENUM('pending','accepted','declined') DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY unique_invite (group_id, to_student_id), FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id) ON DELETE CASCADE, FOREIGN KEY (from_student_id) REFERENCES students(student_id),FOREIGN KEY (to_student_id) REFERENCES students(student_id))`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS unit_constraints(id INT AUTO_INCREMENT PRIMARY KEY, unit_id VARCHAR(20) NOT NULL, min_size INT DEFAULT 4, max_size  INT DEFAULT 5, max_new INT DEFAULT 2, FOREIGN KEY (unit_id) REFERENCES units(unit_code) ON DELETE CASCADE)`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS unit_enrolments(id INT AUTO_INCREMENT PRIMARY KEY, unit_id VARCHAR(20) NOT NULL,student_id VARCHAR(20) NOT NULL, FOREIGN KEY (unit_id) REFERENCES units(unit_code) ON DELETE CASCADE, FOREIGN KEY (student_id) REFERENCES students(student_id))`);
   await conn.query(`CREATE TABLE IF NOT EXISTS student_profiles(id INT AUTO_INCREMENT PRIMARY KEY, student_id VARCHAR(20) UNIQUE NOT NULL, preffered_name VARCHAR(100), bio TEXT, skills VARCHAR(255), interests VARCHAR(255), contact_method VARCHAR(50), contact_handle VARCHAR(100), updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES students(student_id))`);
 
 const students = [
@@ -84,9 +85,10 @@ const admins = [
 
   for (const s of students) {
     const hash = bcrypt.hashSync('password123', 10);
+    const teamupId = `TU-${uuidv4.v4().slice(0, 6).toUpperCase()}`;
     await conn.query(
-      `INSERT IGNORE INTO students (student_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [s.id, s.name, s.email, hash, s.is_new, s.cohort, s.is_admin]
+      `INSERT IGNORE INTO students (student_id, teamup_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [s.id, teamupId, s.name, s.email, hash, s.is_new, s.cohort, s.is_admin]
     );
     await conn.query('DELETE FROM availability WHERE student_id = ?', [s.id]);
     for (const slot of availability[s.id]) {
@@ -97,9 +99,10 @@ const admins = [
   //Admin seeding
   for(const a of admins) {
     const hash = bcrypt.hashSync('password123', 10);
+    const teamupId = `TU-${uuidv4.v4().slice(0, 6).toUpperCase()}`;
     await conn.query(
-      `INSERT IGNORE INTO students (student_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [a.id, a.name, a.email, hash, a.is_new, a.cohort, a.is_admin]
+      `INSERT IGNORE INTO students (student_id, teamup_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [a.id, teamupId, a.name, a.email, hash, a.is_new, a.cohort, a.is_admin]
     );
   }
   console.log('✓ Database and tables created');

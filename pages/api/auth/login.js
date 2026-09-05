@@ -42,6 +42,7 @@ export default async function handler(req, res) {
 
   const payload = {
     studentId: student.student_id,
+    teamupId:  student.teamup_id,
     name:      student.name,
     email:     student.email,
     isNew:     student.is_new,

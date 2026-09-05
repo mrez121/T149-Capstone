@@ -37,7 +37,7 @@ export default async function handler(req, res) {
   let members = [];
   if (grpRows.length > 0) {
     const [memberRows] = await db.query(`
-      SELECT s.student_id, s.name, s.is_new, s.cohort
+      SELECT s.student_id, s.teamup_id, s.name, s.is_new, s.cohort
       FROM students s
       JOIN group_members gm ON s.student_id = gm.student_id
       WHERE gm.group_id = ?

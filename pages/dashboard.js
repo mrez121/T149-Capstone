@@ -210,7 +210,7 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         groupId: myGroup.group_id,
-        targetStudentId: inviteTarget,
+        targetTeamUpId: inviteTarget,
       }),
     });
 
@@ -351,7 +351,7 @@ export default function Dashboard() {
         <div className="nav-right">
           {student && (
             <span className="nav-name">
-              {student.name}
+              {student.name} - {student.teamupId}
 
               <span
                 className={`badge ${
@@ -707,7 +707,7 @@ export default function Dashboard() {
                           </div>
 
                           <div className="member-id">
-                            {member.student_id}
+                            {member.teamup_id}
                           </div>
                         </div>
 
@@ -805,7 +805,7 @@ export default function Dashboard() {
                         >
                           <input
                             className="text-input"
-                            placeholder="Student ID e.g. n10000003"
+                            placeholder="TeamUp ID e.g. TU-123456"
                             value={inviteTarget}
                             onChange={(e) =>
                               setInviteTarget(e.target.value)
@@ -942,7 +942,7 @@ export default function Dashboard() {
                   <div className="create-group-footer">
                     <p className="form-help">
                       Once created, invite teammates by their
-                      student ID from your group panel.
+                      TeamUp ID from your group panel.
                     </p>
 
                     <button
