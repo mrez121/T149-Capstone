@@ -116,4 +116,17 @@
  * the constraint values returned to the defaults 4, 5 and 2.
  * Database inspection confirmed that the test unit had no unit_constraints row.
  * PUT /api/admin/units/999999 returned 404 and displayed Unit not found correctly.
+ *
+ * REGRESSION TEST - group size validation and save request recovery
+ * Tester name: Codex (isolated handler execution with mocked fetch)
+ * Date: 2026/9/4 (Australia/Brisbane)
+ * Test results: PASS
+ * Executed the actual handleSubmit function with controlled request responses.
+ * Min/max values 6/4 and 10/2 displayed an error without sending a request.
+ * Valid ranges 4/4 and 2/10 still sent a PUT request with numeric constraint values.
+ * A pending request kept saving true; a network rejection restored it to false,
+ * preserved form values and displayed an error. A subsequent retry succeeded.
+ * Invalid JSON responses also restored saving and displayed an error.
+ * API error messages were retained without showing a success notification.
+ * These checks used no database writes and did not retest constraint persistence.
  */

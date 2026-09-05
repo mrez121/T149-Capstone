@@ -82,30 +82,42 @@ export default function EditUnitPage() {
   /**
    * @function handleSubmit
    * @async
-   * Submit updated unit to the API
+   * Validate the group size range before submitting the updated unit to the API.
+   * Preserve form values on failure and always restore the save button after a request.
    * @param {*} e react event
    */
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+
+    if (Number(form.min_size) > Number(form.max_size)) {
+      setError('Min group size cannot be greater than max group size.');
+      return;
+    }
+
     setSaving(true);
 
-    const res = await fetch(`/api/admin/units/${id}`, {
-      method:  'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        unit_name: form.unit_name,
-        semester:  form.semester,
-        min_size:  Number(form.min_size),
-        max_size:  Number(form.max_size),
-        max_new:   Number(form.max_new),
-      }),
-    });
-    const data = await res.json();
-    setSaving(false);
+    try {
+      const res = await fetch(`/api/admin/units/${id}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          unit_name: form.unit_name,
+          semester:  form.semester,
+          min_size:  Number(form.min_size),
+          max_size:  Number(form.max_size),
+          max_new:   Number(form.max_new),
+        }),
+      });
+      const data = await res.json();
 
-    if (res.ok) { showToast('Unit updated successfully.'); }
-    else        { setError(data.error || 'Failed to update unit.'); }
+      if (res.ok) { showToast('Unit updated successfully.'); }
+      else        { setError(data.error || 'Failed to update unit.'); }
+    } catch {
+      setError('Unable to save changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) return (
