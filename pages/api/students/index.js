@@ -74,6 +74,13 @@ export default async function handler(req, res) {
     JOIN \`groups\` g ON g.group_id = gm.group_id
   `);
 
+  // Student profile is loaded separately as well before being merged.
+  const [profileRows] = await db.query(`
+    SELECT student_id, preffered_name, bio, skills, interests, contact_method, contact_handle, remote_student
+    FROM student_profiles
+    ORDER BY student_id ASC
+    `);
+
   // Index availability by student ID so multiple slots can be attached to each profile.
   const slotsByStudent = new Map();
   for (const row of slotRows) {
@@ -87,9 +94,15 @@ export default async function handler(req, res) {
     groupRows.map((row) => [row.student_id, row])
   );
 
+  // Each student can only have one profile, mapping keeps object format consistent as well.
+  const profileByStudent = new Map(
+    profileRows.map((row) => [row.student_id, row])
+  );
+
   // Shape the database rows into the normalized response used by the directory cards.
   const students = studentDirectory.map((row) => {
     const group = groupsByStudent.get(row.student_id);
+    const profile = profileByStudent.get(row.student_id);
 
     return {
       studentId: row.student_id,
@@ -105,6 +118,17 @@ export default async function handler(req, res) {
             name: group.name,
             type: group.type,
             status: group.status,
+          }
+        : null,
+      profile: profile
+        ? {
+            prefferedName: profile.preffered_name,
+            bio: profile.bio,
+            skills: profile.skills,
+            interests: profile.interests,
+            contactMethod: profile.contact_method,
+            contactHandle: profile.contact_handle,
+            remoteStudent: profile.remote_student
           }
         : null,
     };

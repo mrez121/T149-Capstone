@@ -202,7 +202,19 @@ export default function StudentProfile() {
               current group status.
             </p>
           </div>
-
+          
+          {isOwnProfile ? (
+          <button
+            type='button'
+            className='btn btn-blue'
+            onClick={() => router.push('edit')}
+            >
+              Edit Profile
+            </button>
+          ) : (
+            null
+          )}
+          
           <button
             type="button"
             className="btn btn-blue"
