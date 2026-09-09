@@ -23,7 +23,10 @@ test('Student Directory: real SQL pagination and access boundaries', async (t) =
     created = true;
     await db.query(`USE \`${database}\``);
     await db.query('CREATE TABLE students (student_id VARCHAR(20) PRIMARY KEY, teamup_id VARCHAR(20), name VARCHAR(100), email VARCHAR(100), cohort VARCHAR(10), is_new TINYINT, is_admin TINYINT, password VARCHAR(255))');
-    await db.query('CREATE TABLE unit_enrolments (id INT AUTO_INCREMENT PRIMARY KEY, unit_id VARCHAR(20), student_id VARCHAR(20))');
+    await db.query('CREATE TABLE units (id INT PRIMARY KEY, unit_code VARCHAR(20) UNIQUE NOT NULL)');
+    await db.query("INSERT INTO units VALUES (17, 'UNIT-A'), (42, 'UNIT-B')");
+    await db.query('CREATE TABLE unit_enrolments (id INT AUTO_INCREMENT PRIMARY KEY, unit_id INT NOT NULL, student_id VARCHAR(20), FOREIGN KEY (unit_id) REFERENCES units(id))');
+    await db.query('CREATE TABLE student_profiles (student_id VARCHAR(20) PRIMARY KEY, preffered_name VARCHAR(100), bio TEXT, skills VARCHAR(255), interests VARCHAR(255), contact_method VARCHAR(50), contact_handle VARCHAR(100), remote_student TINYINT)');
     await db.query('CREATE TABLE availability (student_id VARCHAR(20), slot VARCHAR(20))');
     await db.query('CREATE TABLE `groups` (group_id VARCHAR(20) PRIMARY KEY, name VARCHAR(100), type VARCHAR(20), status VARCHAR(20))');
     await db.query('CREATE TABLE group_members (id INT AUTO_INCREMENT PRIMARY KEY, group_id VARCHAR(20), student_id VARCHAR(20))');
@@ -40,8 +43,14 @@ test('Student Directory: real SQL pagination and access boundaries', async (t) =
       };
     });
     await db.query('INSERT INTO students VALUES ?', [fixtures.map((s) => [s.studentId, s.teamupId, s.name, s.email, s.cohort, s.isNew, s.admin, 'private-password'])]);
-    await db.query('INSERT INTO unit_enrolments (unit_id, student_id) VALUES ?', [fixtures.map((s, i) => [i < 63 || s.admin ? 'UNIT-A' : 'UNIT-B', s.studentId])]);
-    await db.query('INSERT INTO unit_enrolments (unit_id, student_id) VALUES (?, ?)', ['UNIT-A', fixtures[0].studentId]);
+    await db.query('INSERT INTO unit_enrolments (unit_id, student_id) VALUES ?', [fixtures.map((s, i) => [i < 63 || s.admin ? 17 : 42, s.studentId])]);
+    await db.query('INSERT INTO unit_enrolments (unit_id, student_id) VALUES (?, ?)', [17, fixtures[0].studentId]);
+    await db.query('INSERT INTO student_profiles VALUES ?', [[
+      ['test0001', 'Preferred name', 'Test biography', 'React', 'Design', 'Discord', 'test-handle', 1],
+      ['test0002', null, 'Missing preferred name', '', '', null, null, 0],
+      ['test0063', 'Last page profile', 'Profile beyond the first page', 'SQL', 'Testing', 'email', 'profile@example.test', 0],
+      ['test0064', 'Other unit profile', 'Must remain out of scope', '', '', null, null, 0],
+    ]]);
     await db.query('INSERT INTO availability VALUES ?', [fixtures.flatMap((s) => s.slots.map((slot) => [s.studentId, slot]))]);
     await db.query('INSERT INTO availability VALUES (?, ?)', [fixtures[0].studentId, 'FRI-13:00']);
     await db.query('INSERT INTO `groups` VALUES (?, ?, ?, ?)', ['G-TEST', 'Test Group', 'public', 'forming']);
@@ -82,7 +91,7 @@ test('Student Directory: real SQL pagination and access boundaries', async (t) =
       assert.deepEqual(response.data.filters.cohorts, ['2025', '2026']);
       assert.deepEqual(response.data.filters.slots, ['FRI-13:00', 'MON-09:00', 'WED-11:00']);
       assert.ok(statements.some((sql) => sql.includes('LIMIT ? OFFSET ?')));
-      assert.ok(statements.filter((sql) => sql.includes('student_id IN (?)')).length === 2);
+      assert.ok(statements.filter((sql) => sql.includes('student_id IN (?)')).length === 3);
       assert.equal(response.headers['Cache-Control'], 'private, no-store');
     });
     await t.test('all pages have no duplicates, including equal names and duplicate enrolments', async () => {
@@ -151,6 +160,25 @@ test('Student Directory: real SQL pagination and access boundaries', async (t) =
       const response = await request({ page: '1' }, { cookie: 'teamup_token=' + unenrolled });
       assert.equal(response.code, 400);
       assert.match(response.data.error, /not enrolled/);
+    });
+    await t.test('numeric unit foreign keys return the course code and separate internal ID', async () => {
+      const response = await request({ page: '1' });
+      assert.equal(response.data.unit, 'UNIT-A');
+      assert.equal(response.data.unitId, 17);
+    });
+    await t.test('profile fields keep the Student Profile contract, including absent names and profiles', async () => {
+      const response = await request({ page: '1', sort: 'id-asc' });
+      assert.deepEqual(response.data.students[0].profile, {
+        prefferedName: 'Preferred name', bio: 'Test biography', skills: 'React', interests: 'Design',
+        contactMethod: 'Discord', contactHandle: 'test-handle', remoteStudent: 1,
+      });
+      assert.equal(response.data.students[1].profile.prefferedName, fixtures[1].name);
+      assert.equal(response.data.students[2].profile, null);
+      const lastPage = await request({ page: '3', sort: 'id-asc' });
+      assert.equal(lastPage.data.students.find((s) => s.studentId === 'test0063').profile.bio, 'Profile beyond the first page');
+      const legacy = await request();
+      assert.equal(legacy.data.students.find((s) => s.studentId === 'test0063').profile.prefferedName, 'Last page profile');
+      assert.ok(!legacy.data.students.some((s) => s.studentId === 'test0064'));
     });
   } finally {
     try { if (created) await db.query(`DROP DATABASE \`${database}\``); }

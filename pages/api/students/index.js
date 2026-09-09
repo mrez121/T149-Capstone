@@ -45,7 +45,9 @@ export default async function handler(req, res) {
   try {
     const db = getDb();
     const [units] = await db.query(
-      'SELECT unit_id FROM unit_enrolments WHERE student_id = ? ORDER BY id LIMIT 1',
+      `SELECT ue.unit_id, u.unit_code
+       FROM unit_enrolments ue JOIN units u ON u.id = ue.unit_id
+       WHERE ue.student_id = ? ORDER BY ue.id LIMIT 1`,
       [student.studentId],
     );
     if (!units.length) {
@@ -119,13 +121,17 @@ export default async function handler(req, res) {
     const ids = rows.map((row) => row.student_id);
     let slotRows = [];
     let groupRows = [];
+    let profileRows = [];
     // Load details only for this page, avoiding a full scan of every student's data.
     if (ids.length) {
-      [[slotRows], [groupRows]] = await Promise.all([
+      [[slotRows], [groupRows], [profileRows]] = await Promise.all([
         db.query('SELECT DISTINCT student_id, slot FROM availability WHERE student_id IN (?) ORDER BY slot', [ids]),
         db.query(`SELECT gm.student_id, g.group_id, g.name, g.type, g.status
           FROM group_members gm JOIN \`groups\` g ON g.group_id = gm.group_id
           WHERE gm.student_id IN (?) ORDER BY gm.id`, [ids]),
+        db.query(`SELECT student_id, preffered_name, bio, skills, interests,
+          contact_method, contact_handle, remote_student FROM student_profiles
+          WHERE student_id IN (?)`, [ids]),
       ]);
     }
     const slotsByStudent = new Map();
@@ -135,16 +141,26 @@ export default async function handler(req, res) {
       slotsByStudent.set(row.student_id, slots);
     }
     const groupsByStudent = new Map(groupRows.map((row) => [row.student_id, row]));
+    const profilesByStudent = new Map(profileRows.map((row) => [row.student_id, row]));
     const students = rows.map((row) => {
       const group = groupsByStudent.get(row.student_id);
+      const profile = profilesByStudent.get(row.student_id);
       return {
         studentId: row.student_id, teamupId: row.teamup_id, name: row.name,
         email: row.email, isNew: Boolean(row.is_new), cohort: row.cohort,
         slots: slotsByStudent.get(row.student_id) || [],
         group: group ? { groupId: group.group_id, name: group.name, type: group.type, status: group.status } : null,
+        // Keep the field spelling used by the existing Student Profile page.
+        profile: profile ? {
+          prefferedName: profile.preffered_name?.trim() || row.name,
+          bio: profile.bio, skills: profile.skills, interests: profile.interests,
+          contactMethod: profile.contact_method, contactHandle: profile.contact_handle,
+          remoteStudent: profile.remote_student,
+        } : null,
       };
     });
-    return res.status(200).json({ student, students, unit, ...(paginated ? { pagination, stats, filters } : {}) });
+    return res.status(200).json({ student, students, unit: units[0].unit_code, unitId: unit,
+      ...(paginated ? { pagination, stats, filters } : {}) });
   } catch (error) {
     console.error('Student directory query failed:', error.code || error.message);
     return res.status(500).json({ error: 'Unable to load the student directory. Please try again.' });

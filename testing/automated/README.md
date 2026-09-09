@@ -14,11 +14,13 @@ Coverage includes:
 - Authentication and GET-only access.
 - 25-row default pages and 10/25/50/100-row page sizes.
 - Unit isolation, admin exclusion and duplicate enrolment/availability rows.
+- Numeric unit foreign keys with a readable course code and separate unit ID.
 - Stable ordering across pages, including students with equal names.
 - Combined search, group status, student type, cohort and tutorial filters.
 - Literal search characters, invalid parameters, empty results and page bounds.
 - Unit-wide counts/filter options alongside filtered result totals.
 - Compatibility with the parameterless API used by Student Profile.
+- Nested profile fields, preferred-name fallback and page-scoped detail queries.
 - Missing enrolments and exclusion of private database fields.
 
 ## Verification on 2026-09-08
@@ -44,3 +46,9 @@ The browser fixtures verify UI behavior, not backend invitation validation.
 These checks do not claim production-scale load testing or human user testing.
 The legacy parameterless profile lookup still returns the full same-unit list;
 the updated directory itself always requests a bounded page from the API.
+
+## Verification on 2026-09-09
+
+See [the large-data verification record](student-directory-large-data.md) for
+follow-up checks against updated main and 250 generated students. The current
+directory suite has 14 cases plus its parent test (15 reported).
