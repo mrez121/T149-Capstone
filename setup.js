@@ -109,7 +109,7 @@ const admins = [
   console.log('✓ 10 students seeded');
   await conn.end();
   rl.close();
-  console.log('\n✅ Setup complete — run: npm run dev\n'); 
+  console.log('\n✅ Initial setup complete — run: npm run lrgDataSeed\n'); 
 }
 
 setup().catch(err => {

@@ -18,6 +18,7 @@ IFB398 Capstone · QUT Technology For Teaching · Team 149
    npm install
 
 4. Run setup (creates database and seeds students)
+   npm run setup
    npm run lrgDataSeed
    
    When prompted:
