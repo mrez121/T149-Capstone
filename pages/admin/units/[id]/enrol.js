@@ -1,10 +1,11 @@
 // pages/admin/units/[id]/enrol.js
 // Enrol a student in the specified unit
 
-import { useState, useEffect } from 'react';
-import { useRouter }           from 'next/router';
-import Head                    from 'next/head';
-import Link                    from 'next/link';
+import { useState }         from 'react';
+import { useRouter }        from 'next/router';
+import { useSearchParams }  from 'next/navigation';
+import Head                 from 'next/head';
+import Link                 from 'next/link';
 
 /**
  * @function EnrolStudentPage
@@ -15,6 +16,8 @@ export default function EnrolStudentPage() {
 
     const router = useRouter();
     const {id} = router.query;
+    const searchParams = useSearchParams();
+    const unitCode = searchParams.get('id');
 
     //Form state
     const [form, setForm] = useState({
@@ -59,7 +62,7 @@ export default function EnrolStudentPage() {
         setError('');
         setLoading(true);
 
-        const res = await fetch(`/api/admin/units/enrolments_students?unit=${id}`, {
+        const res = await fetch(`/api/admin/units/enrolments_students?unit=${id}&unitCode=${unitCode}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -72,7 +75,7 @@ export default function EnrolStudentPage() {
         setLoading(false);
 
         if(res.ok) {
-            showToast(`Student enrolled to unit ${id} successfully.`);
+            showToast(`Student enrolled to unit ${unitCode} successfully.`);
         }
         else {
             setError(data.error || 'Failed to enrol student');
@@ -98,7 +101,7 @@ export default function EnrolStudentPage() {
 
             <div className='acontainer-sm'>
                 <h1 className='apage-title'>Enrol Student</h1>
-                <p className='apage-sub'>Enrol a student into {id}</p>
+                <p className='apage-sub'>Enrol a student into {unitCode}</p>
 
                 <form onSubmit={handleSubmit} className='aform-card'>
                     {error && <div className='aerror-box'>{error}</div>}

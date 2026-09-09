@@ -8,7 +8,7 @@ import { requireAuth } from "../../../../lib/session";
  * This function handles HTTP requests related to unit enrolments
  * GET      - gets the students enrolled in a unit
  * POST      - adds a student to the unit
- * @todo DELETE   - removes a student from the unit
+ * DELETE   - removes a student from the unit
  * @param {*} req the HTTP request used to determine functionality
  * @param {*} res the HTTP response sent back to the calling page/function
  * @returns a response status code and json object.
@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     if(req.method === 'POST') {
         // Grab unit_id (e.g. IFB399) from url
         const unit = req.query.unit;
+        const unitCode = req.query.unitCode;
         // Grab student details from submitted form
         const {student_id, name, email} = req.body;
 
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
         }
 
         //Check unit exists
-        const [unitCheck] = await db.query('SELECT * FROM units WHERE unit_code = ?', unit);
+        const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
         if(!unitCheck.length) return res.status(404).json({error: 'Unit not found.'});
 
         //Check student exists
@@ -81,7 +82,10 @@ export default async function handler(req, res) {
             [student_id]
         );
         if(enrolmentCheck.length) {
-            return res.status(400).json({error: `Student ${student_id} is already enrolled in a unit`});
+            const [enrolledUnit] = await db.query(
+                `SELECT unit_code FROM units WHERE id = ?`, unit
+            );
+            return res.status(400).json({error: `Student ${student_id} is already enrolled in unit ${enrolledUnit[0].unit_code}`});
         }
 
         //Insert the student into unit_enrolment table
@@ -95,13 +99,14 @@ export default async function handler(req, res) {
 
     // DELETE - remove a student from a unit
     if(req.method === 'DELETE') {
-        // Grab unit_id (e.g. IFB399) from url
+        // Grab unit_id (e.g. 1) and unit_code (e.g. IFB399) from url
         const unit = req.query.unit;
+        const unitCode = req.query.unitCode
         //Grab student details from submitted form
         const {student_id, name, email} = req.body;
 
         // Check unit exists and that the student is enrolled in the unit
-        const [unitCheck] = await db.query('SELECT * FROM units WHERE unit_code = ?', unit);
+        const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
         if(!unitCheck.length) return res.status(404).json({error: 'Student not enrolled in unit.'});
 
         // Check student exists

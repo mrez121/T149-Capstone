@@ -95,7 +95,7 @@ export default async function handler(req, res) {
 
     // Delete constraints and enrolments before deleting the unit
     await db.query('DELETE FROM unit_constraints WHERE unit_id = ?', [id]);
-    await db.query('DELETE FROM unit_enrolments WHERE unit_id = ?', [unitCode]);
+    await db.query('DELETE FROM unit_enrolments WHERE unit_id = ?', [unitCode.unit_code]);
     await db.query('DELETE FROM units WHERE id = ?', [id]);
 
     return res.status(200).json({ ok: true });
