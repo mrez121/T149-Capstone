@@ -40,12 +40,6 @@ export default async function handler(req, res) {
     return res.status(400).json({error: 'Student is not enrolled in a unit.'});
   }
 
-  // Get the current student's unit id from the units table (needed for Foreign Key dependency)
-  const [groupUnitId] = await db.query(`
-    SELECT id from units WHERE unit_code = ?`,
-    [studentUnit[0].unit_id]
-  );
-
   // GET — list public groups in the current user's unit
   if (req.method === 'GET') {
     const [groups] = await db.query(`
@@ -57,7 +51,7 @@ export default async function handler(req, res) {
       FROM \`groups\` g
       WHERE g.type = 'public' AND g.status = 'forming' AND g.unit_id = ?
       ORDER BY g.created_at DESC`,
-      [groupUnitId[0].id]
+      [studentUnit[0].unit_id]
   );
     return res.status(200).json({ groups });
   }
@@ -81,7 +75,7 @@ export default async function handler(req, res) {
 
     const createGroupResult = await db.query(
       "INSERT INTO `groups` (group_id, name, type, status, created_by, unit_id) VALUES (?, ?, ?, 'forming', ?, ?)",
-      [groupId, groupName, type, student.studentId, groupUnitId[0].id]
+      [groupId, groupName, type, student.studentId, studentUnit[0].unit_id]
     );
     await db.query(
       'INSERT INTO group_members (group_id, student_id) VALUES (?, ?)',

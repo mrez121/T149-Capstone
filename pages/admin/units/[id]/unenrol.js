@@ -1,8 +1,9 @@
 // pages/admin/units/[id]/unernol.js
 // Unenrol a student in the specified unit
 
-import {useState, useEffect} from 'react';
+import {useState} from 'react';
 import { useRouter } from 'next/router';
+import { useSearchParams } from 'next/navigation';
 import Head from 'next/head';
 import Link from 'next/link';
 
@@ -15,6 +16,8 @@ export default function UnenrolStudentPage() {
     
     const router = useRouter();
     const {id} = router.query;
+    const searchParams = useSearchParams();
+    const unitCode = searchParams.get('id');
 
     //Form state
     const [form, setForm] = useState({
@@ -59,7 +62,7 @@ export default function UnenrolStudentPage() {
         setError('');
         setLoading(true);
 
-        const res = await fetch(`/api/admin/units/enrolments_students?unit=${id}`, {
+        const res = await fetch(`/api/admin/units/enrolments_students?unit=${id}&unitCode=${unitCode}`, {
             method: 'DELETE',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -72,7 +75,7 @@ export default function UnenrolStudentPage() {
         setLoading(false);
 
         if(res.ok) {
-            showToast(`Student unenrolled from unit ${id} successfully`);
+            showToast(`Student unenrolled from unit ${unitCode} successfully`);
         }
         else {
             setError(data.error || 'Failed to unenrol student');
@@ -97,7 +100,7 @@ export default function UnenrolStudentPage() {
 
             <div className='acontainer-sm'>
                 <h1 className='apage-title'>Unenrol Student</h1>
-                <p className='apage-sub'>Unenrol a student from {id}</p>
+                <p className='apage-sub'>Unenrol a student from {unitCode}</p>
 
                 <form onSubmit={handleSubmit} className='aform-card'>
                     {error && <div className='aerror-box'>{error}</div>}
