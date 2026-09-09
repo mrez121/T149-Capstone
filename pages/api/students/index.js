@@ -119,13 +119,17 @@ export default async function handler(req, res) {
     const ids = rows.map((row) => row.student_id);
     let slotRows = [];
     let groupRows = [];
+    let profileRows = [];
     // Load details only for this page, avoiding a full scan of every student's data.
     if (ids.length) {
-      [[slotRows], [groupRows]] = await Promise.all([
+      [[slotRows], [groupRows], [profileRows]] = await Promise.all([
         db.query('SELECT DISTINCT student_id, slot FROM availability WHERE student_id IN (?) ORDER BY slot', [ids]),
         db.query(`SELECT gm.student_id, g.group_id, g.name, g.type, g.status
           FROM group_members gm JOIN \`groups\` g ON g.group_id = gm.group_id
           WHERE gm.student_id IN (?) ORDER BY gm.id`, [ids]),
+        db.query(`SELECT student_id, preffered_name, bio, skills, interests, contact_method, contact_handle, remote_student
+          FROM student_profiles
+          WHERE student_id IN (?) ORDER BY id`, [ids]),
       ]);
     }
     const slotsByStudent = new Map();
@@ -135,13 +139,24 @@ export default async function handler(req, res) {
       slotsByStudent.set(row.student_id, slots);
     }
     const groupsByStudent = new Map(groupRows.map((row) => [row.student_id, row]));
+    const profileByStudent = new Map(profileRows.map((row) => [row.student_id, row]));
     const students = rows.map((row) => {
       const group = groupsByStudent.get(row.student_id);
+      const profile = profileByStudent.get(row.student_id);
       return {
         studentId: row.student_id, teamupId: row.teamup_id, name: row.name,
         email: row.email, isNew: Boolean(row.is_new), cohort: row.cohort,
         slots: slotsByStudent.get(row.student_id) || [],
         group: group ? { groupId: group.group_id, name: group.name, type: group.type, status: group.status } : null,
+        profile: profile ? {
+          prefferedName: profile.preffered_name,
+          bio: profile.bio,
+          skills: profile.skills,
+          interests: profile.interests,
+          contactMethod: profile.contact_method,
+          contactHandle: profile.contact_handle,
+          remoteStudent: profile.remote_student
+        } : null,
       };
     });
     return res.status(200).json({ student, students, unit, ...(paginated ? { pagination, stats, filters } : {}) });

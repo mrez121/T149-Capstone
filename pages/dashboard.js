@@ -458,6 +458,14 @@ export default function Dashboard() {
               My Tutorial Slots
             </div>
 
+            <button
+              type='button'
+              className='btn btn-blue'
+              onClick={() => router.push(`/students/${student.teamupId}/edit`)}
+              >
+                Edit Availability & Profile
+              </button>
+
             <div className="slot-list">
               {mySlots.length ? (
                 mySlots.map((slot) => (
