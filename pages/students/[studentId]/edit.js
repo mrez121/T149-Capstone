@@ -82,13 +82,13 @@ export default function EditProfilePage() {
                     setProfile(selectedStudent);
                     setProfileForm({
                         teamupId: selectedStudent.teamupId,
-                        preferred_name: selectedStudent.profile.preferredName,
-                        remote_student: selectedStudent.profile.remoteStudent,
-                        skills: selectedStudent.profile.skills,
-                        interests: selectedStudent.profile.interests,
-                        bio: selectedStudent.profile.bio,
-                        contact_method: selectedStudent.profile.contactMethod,
-                        contact_handle: selectedStudent.profile.contactHandle
+                        preferred_name: selectedStudent.profile.preferredName || '',
+                        remote_student: selectedStudent.profile.remoteStudent || false,
+                        skills: selectedStudent.profile.skills || '',
+                        interests: selectedStudent.profile.interests || '',
+                        bio: selectedStudent.profile.bio || '',
+                        contact_method: selectedStudent.profile.contactMethod || '',
+                        contact_handle: selectedStudent.profile.contactHandle || ''
                     });
                     setSlots(selectedStudent.slots);
                     console.log(selectedStudent);
@@ -291,7 +291,7 @@ export default function EditProfilePage() {
 
                     <div className='card-divider'>
                         <label className='section-label'>Preferred Name</label>
-                        <input className='text-input' name='preffered_name' value={profileForm.preferred_name} onChange={handleChange} />
+                        <input className='text-input' name='preferred_name' value={profileForm.preferred_name} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>

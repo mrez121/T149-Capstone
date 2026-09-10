@@ -237,7 +237,7 @@ export default function StudentProfile() {
           <div className="directory-student-top">
             <div className="directory-avatar">
               {profile.profile
-              ? profile.profile.prefferedName.charAt(0).toUpperCase() 
+              ? profile.profile.preferredName.charAt(0).toUpperCase() 
               : profile.name.charAt(0).toUpperCase()}
             </div>
 
@@ -245,7 +245,7 @@ export default function StudentProfile() {
               <div className="directory-name-row">
                 <h2>
                   {profile.profile
-                  ? profile.profile.prefferedName
+                  ? profile.profile.preferredName
                   : profile.name}
                   </h2>
 

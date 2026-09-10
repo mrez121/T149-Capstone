@@ -129,7 +129,7 @@ export default async function handler(req, res) {
         db.query(`SELECT gm.student_id, g.group_id, g.name, g.type, g.status
           FROM group_members gm JOIN \`groups\` g ON g.group_id = gm.group_id
           WHERE gm.student_id IN (?) ORDER BY gm.id`, [ids]),
-        db.query(`SELECT student_id, preffered_name, bio, skills, interests,
+        db.query(`SELECT student_id, preferred_name, bio, skills, interests,
           contact_method, contact_handle, remote_student FROM student_profiles
           WHERE student_id IN (?)`, [ids]),
       ]);
@@ -152,7 +152,7 @@ export default async function handler(req, res) {
         group: group ? { groupId: group.group_id, name: group.name, type: group.type, status: group.status } : null,
         // Keep the field spelling used by the existing Student Profile page.
         profile: profile ? {
-          prefferedName: profile.preffered_name?.trim() || row.name,
+          preferredName: profile.preferred_name?.trim() || row.name,
           bio: profile.bio, skills: profile.skills, interests: profile.interests,
           contactMethod: profile.contact_method, contactHandle: profile.contact_handle,
           remoteStudent: profile.remote_student,
