@@ -6,8 +6,15 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 
+/**
+ * @function EditProfilePage
+ * This function creates the Edit Profile page using react.js
+ * @returns Edit Profile Page html || loading html (if loading = true) || error page html (if error with fetching or updating profile information)
+ */
 export default function EditProfilePage() {
-    
+    /**
+     * Constatnts related to page data and states
+     */
     const router = useRouter();
     const {studentId} = router.query;
 
@@ -15,7 +22,7 @@ export default function EditProfilePage() {
     const [profileForm, setProfileForm] = useState({
         teamupId: '',
         preferred_name: '',
-        remote_student:'',
+        remote_student: false,
         skills: '',
         interests: '',
         bio: '',
@@ -23,8 +30,9 @@ export default function EditProfilePage() {
         contact_handle: '',
     });
     // Availability slot states
-    const [slots, setSlots] = useState([]);
-    const [unitSlots, setUnitSlots] = useState([]);
+    const [studentSlots, setStudentSlots] = useState([]);
+    const [unitSlots, setUnitSlots] = useState(null);
+
     const [currentStudent, setCurrentStudent] = useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -38,6 +46,14 @@ export default function EditProfilePage() {
             return;
         }
 
+        /**
+         * @function loadStudentProfile
+         * @async
+         * Load the student profile information for the student (if it exists already).
+         * Prefill the edit forms with their profile and availability information.
+         * Loading state defines page construction at the end of this function call, ensuring that updates are reflected to the user in real-time.
+         * Follows similar structure to the student directory for fetching and displaying data.
+         */
         async function loadStudentProfile() {
             try {
                 // Fetches student data
@@ -56,6 +72,7 @@ export default function EditProfilePage() {
                 
                 const data = await res.json();
                 const unitSlotData = await slotRes.json();
+                setUnitSlots(unitSlotData);
 
                 if(!res.ok) {
                     throw new Error(data.error || 'Unable to load student profile.');
@@ -79,20 +96,28 @@ export default function EditProfilePage() {
                     setError(`Cannot edit another student's profile.`);
                 }
                 else {
+                    // Set profile information and form details if the user already has a profile.
                     setProfile(selectedStudent);
-                    setProfileForm({
-                        teamupId: selectedStudent.teamupId,
-                        preferred_name: selectedStudent.profile.preferredName || '',
-                        remote_student: selectedStudent.profile.remoteStudent || false,
-                        skills: selectedStudent.profile.skills || '',
-                        interests: selectedStudent.profile.interests || '',
-                        bio: selectedStudent.profile.bio || '',
-                        contact_method: selectedStudent.profile.contactMethod || '',
-                        contact_handle: selectedStudent.profile.contactHandle || ''
-                    });
-                    setSlots(selectedStudent.slots);
-                    console.log(selectedStudent);
-                    console.log(selectedStudent.slots);
+                    const studentProfile = selectedStudent.profile;
+                    if(studentProfile !== null) {
+                        setProfileForm({
+                            teamupId: selectedStudent.teamupId,
+                            preferred_name: selectedStudent.profile.preferredName,
+                            remote_student: selectedStudent.profile.remoteStudent,
+                            skills: selectedStudent.profile.skills,
+                            interests: selectedStudent.profile.interests,
+                            bio: selectedStudent.profile.bio,
+                            contact_method: selectedStudent.profile.contactMethod,
+                            contact_handle: selectedStudent.profile.contactHandle
+                        });
+                    }
+                    else {
+                        setProfileForm({
+                            teamupId: selectedStudent.teamupId
+                        })
+                    }
+                    
+                    setStudentSlots(selectedStudent.slots);
                 }
             }
             catch(err) {
@@ -106,11 +131,21 @@ export default function EditProfilePage() {
         loadStudentProfile();
     }, [router.isReady, studentId]);
 
+    /**
+     * @function handleLogout
+     * @async
+     * End the session and return the user to the login page
+     */
     async function handleLogout() {
         await fetch('/api/auth/logout', {method: 'POST'});
         router.push('/');
     }
 
+    /**
+     * @function handleChange
+     * Updates the profile form state with the information that the user fills in.
+     * @param {*} e a react event
+     */
     function handleChange(e) {
         const target = e.target;
         const value = target.type === 'checkbox' ? target.checked : target.value;
@@ -118,11 +153,23 @@ export default function EditProfilePage() {
         setProfileForm(values => ({...values, [name]: value}));
     }
 
+    /**
+     * @function showToast
+     * A reusable feedback helper for actions on the page
+     * @param {*} msg - a message to be displayed to the user
+     * @param {*} type - determines the visual formatting of the toast displayed
+     */
     function showToast(msg, type = 'success') {
         setToast({msg, type});
         setTimeout(() => setToast(null), 4000);
     }
 
+    /**
+     * @function handleProfileSubmit
+     * @async
+     * submits the information in the profile form to be entered into the database.
+     * @param {*} e a react event
+     */
     async function handleProfileSubmit(e) {
         e.preventDefault();
         setError('');
@@ -158,6 +205,29 @@ export default function EditProfilePage() {
         }
     }
 
+    /**
+     * @function handleSlotSelect
+     * A function that adjusts what timeslots a student has selected for their availability.
+     * @param {*} e a react event
+     */
+    function handleSlotSelect(e) {
+        const value = e.target.value;
+        const selectCheck = studentSlots.includes(value);
+        
+        if(!selectCheck) {
+            setStudentSlots([...studentSlots, value]);            
+        }
+        if(selectCheck) {
+            setStudentSlots(studentSlots.filter(slot => slot !== value));
+        }
+    }
+
+    /**
+     * @function handleAvailabilitySubmit
+     * @async
+     * submits the student's availability information to be entered into the database
+     * @param {*} e a react event
+     */
     async function handleAvailabilitySubmit(e) {
         e.preventDefault();
         setError('');
@@ -170,6 +240,7 @@ export default function EditProfilePage() {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     submitType: 'availability',
+                    selectedSlots: studentSlots,
                 }),
             });
             const data = await res.json();
@@ -225,6 +296,12 @@ export default function EditProfilePage() {
             <Head>
                 <title>TeamUp - Edit {profile.name}</title>
             </Head>
+
+            {toast && (
+                <div className={`toast toast-${toast.type}`}>
+                    {toast.msg}
+                </div>
+            )}
 
             <nav>
                 <div className='logo'>
@@ -285,42 +362,49 @@ export default function EditProfilePage() {
 
                     <div className='card-divider'>
                         <label className='section-label'>TeamUp ID</label>
+                        <div className='form-help'>TeamUp ID cannot be changed</div>
                         <input className='text-input' name='teamup_id' value={profileForm.teamupId} disabled style={{opacity:.5, cursor:'not-allowed'}} />
-                        <span className='form-help'>TeamUp ID cannot be changed</span>
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Preferred Name</label>
+                        <div className='form-help'>Optional</div>
                         <input className='text-input' name='preferred_name' value={profileForm.preferred_name} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Are you a remote student?</label>
+                        <span>{/*SPACING FOR TESTING */}      </span>
                         <input type='checkbox' name='remote_student' checked={profileForm.remote_student} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Skills</label>
+                        <div className='form-help'>Optional</div>
                         <input className='text-input' name='skills' value={profileForm.skills} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Interests</label>
+                        <div className='form-help'>Optional</div>
                         <input className='text-input' name='interests' value={profileForm.interests} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Bio</label>
+                        <div className='form-help'>Optional</div>
                         <input className='text-input' name='bio' value={profileForm.bio} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Contact Method</label>
+                        <div className='form-help'>E.g., phone, email, Discord, etc.</div>
                         <input className='text-input' name='contact_method' value={profileForm.contact_method} onChange={handleChange} />
                     </div>
 
                     <div className='card-divider'>
                         <label className='section-label'>Contact Handle</label>
+                        <div className='form-help'>Only share contact info you are ok with being publically available</div>
                         <input className='text-input' name='contact_handle' value={profileForm.contact_handle} onChange={handleChange} />
                     </div>
 
@@ -333,8 +417,42 @@ export default function EditProfilePage() {
                 </form>
                 
                 <form onSubmit={handleAvailabilitySubmit} className='card'>
+                    {error && <div className='aerror-box'>{error}</div>}
+
+                    <ul>
+                        {unitSlots.timeslots.map((item) => {
+                            const selectedSlot = studentSlots.includes(item.slot);
+                            if(selectedSlot) {
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type='button'
+                                        className='btn btn-teal'
+                                        value={item.slot}
+                                        onClick={handleSlotSelect}
+                                    >
+                                    {item.slot}
+                                </button>
+                                )
+                            }
+                            if(!selectedSlot) {
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type='button'
+                                        className='btn btn-red'
+                                        value={item.slot}
+                                        onClick={handleSlotSelect}
+                                    >
+                                    {item.slot}
+                                </button>
+                                )
+                            }
+                            
+                        })}
+                    </ul>
                     <div className='btn-row'>
-                        <button className='btn btn-red' type='submit' disabled={saving}>
+                        <button className='btn btn-blue' type='submit' disabled={saving}>
                             {saving ? 'Saving...' : 'Save availability'}
                         </button>
                     </div>

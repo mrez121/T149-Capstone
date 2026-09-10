@@ -66,7 +66,7 @@ export default function Dashboard() {
       }
 
       if (!mineRes.ok) {
-        throw new Error('Unable to load your student and group information.');
+        throw new Error('Unable to load your student and group information. Please contact your unit coordinator to confirm your enrolment.');
       }
 
       const mine = await mineRes.json();

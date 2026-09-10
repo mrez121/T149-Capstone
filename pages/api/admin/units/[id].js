@@ -71,7 +71,7 @@ export default async function handler(req, res) {
 
     // Unlock locked groups in the unit to force revalidation of unit constraints
     const [lockedGroups] = await db.query('SELECT * FROM \`groups\` WHERE unit_id = ? and status = ?', [id, 'locked']);
-    console.log(lockedGroups);
+    
     for(let i = 0; i < lockedGroups.length; i++) {
       await db.query('UPDATE \`groups\` SET status = ? WHERE group_id = ?', ['forming', lockedGroups[i].group_id]);
     }
