@@ -182,16 +182,10 @@ export default function adminDashboard() {
                             className="btn-row"
                             style={{marginTop:20}}
                         >
-                            <button
-                                className="btn btn-blue"
-                                onClick={() =>
-                                    showToast(
-                                        "CSV export is still in development."
-                                    )
-                                }
-                            >
+                            <Link href="/admin/export-csv" className="btn btn-blue">
                                 Export CSV
-                            </button>
+                            </Link>
+                            
                         </div>
                     </div>
                 </div>
