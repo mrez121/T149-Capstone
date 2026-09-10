@@ -37,13 +37,20 @@ export default async function handler(req, res) {
   let members = [];
   if (grpRows.length > 0) {
     const [memberRows] = await db.query(`
-      SELECT s.student_id, s.name, s.is_new, s.cohort
+      SELECT s.student_id, s.teamup_id, s.name, s.is_new, s.cohort
       FROM students s
       JOIN group_members gm ON s.student_id = gm.student_id
       WHERE gm.group_id = ?
     `, [grpRows[0].group_id]);
     members = memberRows;
   }
+
+  const [unit] = await db.query(`
+    SELECT unit_id FROM unit_enrolments WHERE student_id = ?`, student.studentId
+  );
+  const [unitConstraints] = await db.query(`
+    SELECT * FROM unit_constraints WHERE unit_id = ?`, unit[0].unit_id
+  );
 
   const [slotRows] = await db.query(
     'SELECT slot FROM availability WHERE student_id = ? ORDER BY slot',
@@ -62,6 +69,7 @@ export default async function handler(req, res) {
   return res.status(200).json({
     group:   grpRows[0] || null,
     members,
+    groupConstraints: unitConstraints[0] || null,
     slots:   slotRows.map(r => r.slot),
     student,
     invites: inviteRows,

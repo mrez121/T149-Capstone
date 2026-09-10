@@ -33,9 +33,9 @@ export default async function handler(req, res) {
   const student = requireAuth(req, res);
   if (!student) return;
 
-  const { targetStudentId, groupId } = req.body;
+  const { targetTeamUpId, groupId } = req.body;
 
-  if (!targetStudentId || !groupId) {
+  if (!targetTeamUpId || !groupId) {
     return res.status(400).json({ error: 'targetStudentId and groupId are required.' });
   }
 
@@ -55,34 +55,34 @@ export default async function handler(req, res) {
   }
 
   // Check target student exists
-  const target = targetStudentId.trim().toLowerCase();
+  const target = targetTeamUpId.trim().toLowerCase();
   const [targetRows] = await db.query(
-    'SELECT * FROM students WHERE student_id = ?', [target]
+    'SELECT * FROM students WHERE teamup_id = ?', [target]
   );
   if (!targetRows.length) {
     return res.status(404).json({ error: `Student "${target}" not found.` });
   }
 
   // Can't invite yourself
-  if (target === student.studentId) {
+  if (target === student.teamupId) {
     return res.status(400).json({ error: 'You cannot invite yourself.' });
   }
 
   // Check target not already in a group
   const [targetInGroup] = await db.query(
-    'SELECT group_id FROM group_members WHERE student_id = ?', [target]
+    'SELECT group_id FROM group_members WHERE student_id = ?', [targetRows[0].student_id]
   );
   if (targetInGroup.length > 0) {
-    return res.status(400).json({ error: `${targetRows[0].name} is already in a group.` });
+    return res.status(400).json({ error: `${targetRows[0].teamup_id} is already in a group.` });
   }
 
   // Pre-check constraints
-  const { ok, errors } = await validateJoin(groupId, target);
+  const { ok, errors } = await validateJoin(groupId, targetRows[0].student_id);
   if (!ok) return res.status(400).json({ ok: false, errors });
 
   const [existingInviteRows] = await db.query(
     'SELECT * FROM invites WHERE group_id = ? AND to_student_id = ?',
-    [groupId, target]
+    [groupId, targetRows[0].student_id]
   );
   const existingInvite = existingInviteRows[0];
   if (existingInvite?.status === 'pending') {
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
   } else {
     await db.query(
       'INSERT INTO invites (group_id, from_student_id, to_student_id, status) VALUES (?, ?, ?, "pending")',
-      [groupId, student.studentId, target]
+      [groupId, student.studentId, targetRows[0].student_id]
     );
   }
 

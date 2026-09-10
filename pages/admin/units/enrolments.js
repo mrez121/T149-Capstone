@@ -65,9 +65,9 @@ export default function enrolmentsPage() {
      * If there is an error, display the error.
      * @param {*} unitCode 
      */
-    async function getEnrolments(unitCode) {
+    async function getEnrolments(unitId, unitCode) {
         //Pass unit code to URL parameters
-        const res = await fetch(`/api/admin/units/enrolments_students?unit=${unitCode}`, {method: 'GET'});
+        const res = await fetch(`/api/admin/units/enrolments_students?unit=${unitId}`, {method: 'GET'});
         const data = await res.json();
 
         //Check if the query was successful, throw an error if not.
@@ -146,6 +146,9 @@ export default function enrolmentsPage() {
                   <Link href={`/admin/units/${u.unit_code}/enrol`} className="abtn abtn-teal abtn-sm">Enrol student</Link>
                   <Link href={`/admin/units/${u.unit_code}/unenrol`} className="abtn abtn-red abtn-sm">Unenrol student</Link>
                   <Link href="/admin/units/csv-upload" className="abtn abtn-teal">📂 Upload CSV</Link>
+                  <button className="abtn abtn-blue" onClick={() => getEnrolments(u.id, u.unit_code)}>{u.unit_code} Enrolments</button>
+                  <Link href={`/admin/units/${u.id}/enrol?id=${u.unit_code}`} className="abtn abtn-teal abtn-sm">Enrol student</Link>
+                  <Link href={`/admin/units/${u.id}/unenrol?id=${u.unit_code}`} className="abtn abtn-red abtn-sm">Unenrol student</Link>
                 </div>
               </div>
             ))}

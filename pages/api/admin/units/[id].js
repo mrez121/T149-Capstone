@@ -17,19 +17,20 @@ import { requireAuth } from '../../../../lib/session';
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-
-  // Check user is logged in and is an admin
+  
   /**
-   * @const student
-   * @const id
-   * @const db
+   * @const student - the admin user
+   * @const id - the unit id
+   * @const db - the database
    */
+  // Check user is logged in and is an admin
   const student = requireAuth(req, res);
   if (!student) return;
   if (!student.isAdmin) return res.status(403).json({ error: 'Admin access required.' });
 
   const { id } = req.query;
   const db = getDb();
+  const [unitCode] = await db.query(`SELECT unit_code FROM units WHERE id = ?`, [id]);
 
   // GET — return a single unit with its constraints
   if (req.method === 'GET') {
@@ -47,6 +48,10 @@ export default async function handler(req, res) {
   // PUT — update unit name, semester and constraints
   if (req.method === 'PUT') {
     const { unit_name, semester, min_size, max_size, max_new } = req.body;
+    // Validation checks
+    if(max_size < min_size || min_size === 0 || max_size === 0) {
+      return res.status(400).json({error: 'Invalid team size parameters.'});
+    }
 
     // Check unit exists
     const [unit] = await db.query('SELECT * FROM units WHERE id = ?', [id]);
@@ -63,6 +68,13 @@ export default async function handler(req, res) {
       'UPDATE unit_constraints SET min_size = ?, max_size = ?, max_new = ? WHERE unit_id = ?',
       [min_size, max_size, max_new, id]
     );
+
+    // Unlock locked groups in the unit to force revalidation of unit constraints
+    const [lockedGroups] = await db.query('SELECT * FROM \`groups\` WHERE unit_id = ? and status = ?', [id, 'locked']);
+    console.log(lockedGroups);
+    for(let i = 0; i < lockedGroups.length; i++) {
+      await db.query('UPDATE \`groups\` SET status = ? WHERE group_id = ?', ['forming', lockedGroups[i].group_id]);
+    }
 
     return res.status(200).json({ ok: true });
   }
@@ -83,7 +95,7 @@ export default async function handler(req, res) {
 
     // Delete constraints and enrolments before deleting the unit
     await db.query('DELETE FROM unit_constraints WHERE unit_id = ?', [id]);
-    await db.query('DELETE FROM unit_enrolments WHERE unit_id = ?', [id]);
+    await db.query('DELETE FROM unit_enrolments WHERE unit_id = ?', [unitCode.unit_code]);
     await db.query('DELETE FROM units WHERE id = ?', [id]);
 
     return res.status(200).json({ ok: true });

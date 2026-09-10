@@ -19,6 +19,7 @@ IFB398 Capstone · QUT Technology For Teaching · Team 149
 
 4. Run setup (creates database and seeds students)
    npm run setup
+   npm run lrgDataSeed
    
    When prompted:
    - MySQL host: Click Enter (localhost) - LEAVE EMPTY AND JUST CLICK ENTER
@@ -44,6 +45,13 @@ n10000007 - Grace Kim       (Returning)
 n10000008 - Henry Wilson    (NEW)
 n10000009 - Isabella Jones  (Returning)
 n10000010 - James Brown     (Returning)
+
+bfarnsworth - Brandon Farnsworth (Admin)
+wlu - Weiyi Lu (Admin)
+mrezwani - Mehdi Rezwani (Admin)
+hwang - Hongyun Wang (Admin)
+
+250 random students are also generated to populate the database.
 
 ## How the system works
 1. Students discuss and agree on a group outside the system

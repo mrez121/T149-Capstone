@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     if(req.method === 'POST') {
         // Grab unit_id (e.g. IFB399) from url
         const unit = req.query.unit;
+        const unitCode = req.query.unitCode;
         // Grab student details from submitted form
         const {student_id, name, email} = req.body;
 
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
         }
 
         //Check unit exists
-        const [unitCheck] = await db.query('SELECT * FROM units WHERE unit_code = ?', unit);
+        const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
         if(!unitCheck.length) return res.status(404).json({error: 'Unit not found.'});
 
         //Check student exists
@@ -81,7 +82,10 @@ export default async function handler(req, res) {
             [student_id]
         );
         if(enrolmentCheck.length) {
-            return res.status(400).json({error: `Student ${student_id} is already enrolled in a unit`});
+            const [enrolledUnit] = await db.query(
+                `SELECT unit_code FROM units WHERE id = ?`, unit
+            );
+            return res.status(400).json({error: `Student ${student_id} is already enrolled in unit ${enrolledUnit[0].unit_code}`});
         }
 
         //Insert the student into unit_enrolment table
@@ -95,14 +99,15 @@ export default async function handler(req, res) {
 
     // DELETE - remove a student from a unit
     if(req.method === 'DELETE') {
-        // Grab unit_id (e.g. IFB399) from url
+        // Grab unit_id (e.g. 1) and unit_code (e.g. IFB399) from url
         const unit = req.query.unit;
+        const unitCode = req.query.unitCode
         //Grab student details from submitted form
         const {student_id, name, email} = req.body;
 
-        // Check unit exists
-        const [unitCheck] = await db.query('SELECT * FROM units WHERE unit_code = ?', unit);
-        if(!unitCheck.length) return res.status(404).json({error: 'Unit not found.'});
+        // Check unit exists and that the student is enrolled in the unit
+        const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
+        if(!unitCheck.length) return res.status(404).json({error: 'Student not enrolled in unit.'});
 
         // Check student exists
         const [studentCheck] = await db.query(
@@ -112,6 +117,46 @@ export default async function handler(req, res) {
             [student_id, name, email]
         );
         if(!studentCheck.length) return res.status(404).json({error: 'Student not found.'});
+
+        //If student is in a group, check that the group is locked, unlock if needed,
+        //remove the student from the group and transfer ownership of the group to the next student if needed.
+        //Delete the group if the student is the only group member in the group.
+        const [groupCheck] = await db.query(
+            `SELECT group_id FROM group_members WHERE student_id = ?`, [student_id]
+        );
+        if(groupCheck.length) {
+            const [groupDetail] = await db.query(
+                `SELECT * FROM \`groups\` WHERE group_id = ?`, [groupCheck[0].group_id]
+            );
+            if(groupDetail[0].status === 'locked') {
+                await db.query(`UPDATE \`groups\` SET status = ? WHERE group_id = ?`, ["forming", groupDetail[0].group_id]);
+            }
+            if(groupDetail[0].created_by === student_id) {
+                const[groupMembers] = await db.query(
+                    `SELECT student_id
+                    FROM group_members
+                    WHERE group_id = ?
+                    ORDER BY joined_at`,
+                    groupCheck[0].group_id
+                );
+                if(groupMembers.length === 1) {
+                    await db.query(
+                        `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
+                    );
+                    await db.query(
+                        `DELETE FROM \`groups\` WHERE group_id = ?`, [groupDetail[0].group_id]
+                    );
+                }
+                if(groupMembers.length > 1) {
+                    await db.query(
+                        `UPDATE \`groups\` SET created_by = ? WHERE group_id = ?`, [groupMembers[1].student_id, groupDetail[0].group_id]
+                    );
+                    await db.query(
+                        `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
+                    );
+                }
+            }
+        }
 
         // Delete student from unit_enrolments table
         await db.query(

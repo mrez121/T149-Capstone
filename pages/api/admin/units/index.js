@@ -74,14 +74,15 @@ export default async function handler(req, res) {
       'INSERT INTO units (unit_code, unit_name, semester, created_by) VALUES (?, ?, ?, ?)',
       [unit_code.toUpperCase(), unit_name, semester, student.studentId]
     );
+    
+    const unitId = result.insertId;
 
     // Insert constraints using the new unit ID
-    
     await db.query(
       'INSERT INTO unit_constraints (unit_id, min_size, max_size, max_new) VALUES (?, ?, ?, ?)',
-      [unit_code, min_size, max_size, max_new]
+      [unitId, min_size, max_size, max_new]
     );
-    const unitId = result.insertId;
+    
     return res.status(201).json({ ok: true, unitId, unit_code: unit_code.toUpperCase() });
   }
 

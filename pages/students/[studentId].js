@@ -51,15 +51,15 @@ export default function StudentProfile() {
 
         setCurrentStudent(data.student || null);
 
-        const routeStudentId = Array.isArray(studentId)
+        const routeTeamupId = Array.isArray(studentId)
           ? studentId[0]
           : studentId;
 
         // Finds the student whose ID matches the dynamic route parameter.
         const selectedStudent = (data.students || []).find(
           (item) =>
-            item.studentId.toLowerCase() ===
-            routeStudentId.toLowerCase()
+            item.teamupId.toLowerCase() ===
+            routeTeamupId.toLowerCase()
         );
 
         if (!selectedStudent) {
@@ -98,6 +98,15 @@ export default function StudentProfile() {
     if (!value) return 'Not provided';
 
     return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
+  function formatRemoteStatus(value) {
+    if(value === 0) {
+      return "On campus";
+    }
+    if(value === 1) {
+      return "Remote student";
+    }
   }
 
   if (loading) {
@@ -150,7 +159,7 @@ export default function StudentProfile() {
         <div className="nav-right">
           {currentStudent && (
             <span className="nav-name">
-              {currentStudent.name}
+              {currentStudent.name} - {currentStudent.teamupId}
 
               <span
                 className={`badge ${
@@ -202,7 +211,19 @@ export default function StudentProfile() {
               current group status.
             </p>
           </div>
-
+          
+          {isOwnProfile ? (
+          <button
+            type='button'
+            className='btn btn-blue'
+            onClick={() => router.push(`${profile.teamupId}/edit`)}
+            >
+              Edit Profile
+            </button>
+          ) : (
+            null
+          )}
+          
           <button
             type="button"
             className="btn btn-blue"
@@ -215,19 +236,25 @@ export default function StudentProfile() {
         <section className="card profile-overview-card">
           <div className="directory-student-top">
             <div className="directory-avatar">
-              {profile.name.charAt(0).toUpperCase()}
+              {profile.profile
+              ? profile.profile.preferredName.charAt(0).toUpperCase() 
+              : profile.name.charAt(0).toUpperCase()}
             </div>
 
             <div className="directory-student-main">
               <div className="directory-name-row">
-                <h2>{profile.name}</h2>
+                <h2>
+                  {profile.profile
+                  ? profile.profile.preferredName
+                  : profile.name}
+                  </h2>
 
                 {isOwnProfile && (
                   <span className="badge badge-blue">You</span>
                 )}
               </div>
 
-              <p>{profile.studentId}</p>
+              <p>{profile.teamupId}</p>
             </div>
 
             <span
@@ -243,13 +270,18 @@ export default function StudentProfile() {
 
           <div className="directory-detail-list profile-detail-list">
             <div>
-              <span>Student ID</span>
-              <strong>{profile.studentId}</strong>
+              <span>TeamUp ID</span>
+              <strong>{profile.teamupId}</strong>
             </div>
 
             <div>
-              <span>Email</span>
-              <strong>{profile.email}</strong>
+              <span>Remote Student</span>
+              <strong>
+                {profile.profile
+                ? formatRemoteStatus(profile.profile.remoteStudent)
+                : "Not specified"
+                }
+              </strong>
             </div>
 
             <div>
@@ -265,6 +297,47 @@ export default function StudentProfile() {
                   : 'Available'}
               </strong>
             </div>
+
+            <div>
+              <span>Bio</span>
+              <strong>
+                {profile.profile
+                ? profile.profile.bio
+                : ''
+                }
+              </strong>
+            </div>
+
+            <div>
+              <span>Skills</span>
+              <strong>
+                {profile.profile
+                ? profile.profile.skills
+                : ''
+                }
+                </strong>
+            </div>
+            
+            <div>
+              <span>Interests</span>
+              <strong>
+                {profile.profile
+                ? profile.profile.interests
+                : ''
+                }
+              </strong>
+            </div>
+
+            <div>
+              <span>Contact method</span>
+              <strong>
+                {profile.profile
+                ? profile.profile.contactMethod + ": " + profile.profile.contactHandle
+                : ''
+                }
+              </strong>
+            </div>
+
           </div>
         </section>
 
