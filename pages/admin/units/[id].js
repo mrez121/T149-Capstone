@@ -33,6 +33,7 @@ export default function EditUnitPage() {
     max_size:  5,
     max_new:   2,
   });
+  const [unitSlots, setUnitSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
@@ -53,6 +54,8 @@ export default function EditUnitPage() {
             max_size:  data.unit.max_size ?? 5,
             max_new:   data.unit.max_new  ?? 2,
           });
+          setUnitSlots(data.timeslots);
+          console.log(data);
         }
         setLoading(false);
       });
@@ -189,6 +192,24 @@ export default function EditUnitPage() {
               <span className="aconstraint-tag">🎓 Max {form.max_new} new students per group</span>
               <span className="aconstraint-tag">🗓 1+ shared tutorial slot required</span>
             </div>
+          </div>
+
+          <div className='aconstraints-preview'>
+            <div className='apreview-label'>Current tutorial timeslots</div>
+            <ul>
+              {unitSlots.map((item) => {
+                return (
+                  <button
+                    key={item.id}
+                    type='button'
+                    className='btn btn-red'
+                    value={item.slot}
+                  >
+                    {item.slot}
+                  </button>
+                )
+              })}
+            </ul>
           </div>
 
           <div className="abtn-row">
