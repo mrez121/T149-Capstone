@@ -17,7 +17,7 @@ export default function EnrolStudentPage() {
     const router = useRouter();
     const {id} = router.query;
     const searchParams = useSearchParams();
-    const unitCode = searchParams.get('id');
+const unitCode = searchParams.get('unitCode');
 
     //Form state
     const [form, setForm] = useState({
