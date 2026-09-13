@@ -128,9 +128,12 @@ export default function Dashboard() {
    */
   const memberCount = myMembers.length;
   const newCount = myMembers.filter((m) => m.is_new).length;
-  const sizeOk = memberCount >= myGroupConstraints.min_size && memberCount <= myGroupConstraints.max_size;
+  const sizeOk = memberCount <= myGroupConstraints.max_size;
   const newOk = newCount <= myGroupConstraints.max_new;
-  const slotOk = !!myGroup?.shared_slot;
+  let   slotOk = !!myGroup?.shared_slot;
+  if(memberCount === 1) {
+    slotOk = mySlots;
+  }
   const allOk = sizeOk && newOk && slotOk;
   const seatsNeeded = Math.max(0, myGroupConstraints.min_size - memberCount);
   const openSeats = Math.max(0, myGroupConstraints.max_size - memberCount);
@@ -507,7 +510,7 @@ export default function Dashboard() {
                   </span>
 
                   <span className="cv">
-                    {memberCount} / {myGroupConstraints.min_size}–{myGroupConstraints.max_size} members
+                    {memberCount} / {myGroupConstraints.max_size} members
                   </span>
                 </div>
 
@@ -561,7 +564,7 @@ export default function Dashboard() {
               <>
                 <div className="constraint-row c-info">
                   <span>👥 Team size</span>
-                  <span className="cv">{myGroupConstraints.min_size}–{myGroupConstraints.max_size} members</span>
+                  <span className="cv">{myGroupConstraints.max_size} members</span>
                 </div>
 
                 <div className="constraint-row c-info">
