@@ -10,13 +10,11 @@ import Link from "next/link";
  * @returns Admin dashboard hhtml
  */
 export default function adminDashboard() {
-    //admin functionality up here
     /**
      * @const router
      * @const toast
      */
     const router = useRouter();
-
     const [toast, setToast] = useState(null);
 
     /**
@@ -164,6 +162,16 @@ export default function adminDashboard() {
                                 }}
                             >
                                 View and manage groups
+                            </Link>
+                            <Link
+                                href="/admin/units/manage_teams"
+                                className="btn btn-teal"
+                                style={{
+                                    textDecoration:"none",
+                                    display:"inline-block"
+                                }}
+                            >
+                                View and manage teams
                             </Link>
                         </div>
                     </div>
