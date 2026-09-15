@@ -10,7 +10,7 @@ import { requireAuth } from '../../../../lib/session';
  * @function handler
  * This function handles HTTP requests related to unit IDs:
  * GET    - get a single unit with its constraints
- * PUT    - edit unit details and constraints
+ * PUT    - edit unit details and constraints, or edit timeslots for a unit
  * DELETE - delete a unit
  * @param {*} req the HTTP request used to determine functionality
  * @param {*} res the HTTP response sent back to the calling page/function
@@ -41,42 +41,100 @@ export default async function handler(req, res) {
       WHERE u.id = ?
     `, [id]);
 
+    const [timeslots] = await db.query(`
+      SELECT id, slot FROM timeslots WHERE unit_id = ? ORDER BY id
+      `, [id]
+    );
+
     if (!rows.length) return res.status(404).json({ error: 'Unit not found.' });
-    return res.status(200).json({ unit: rows[0] });
+    return res.status(200).json({ unit: rows[0], timeslots: timeslots });
   }
 
-  // PUT — update unit name, semester and constraints
+  // PUT — update unit name, semester and constraints or unit timeslots
   if (req.method === 'PUT') {
-    const { unit_name, semester, min_size, max_size, max_new } = req.body;
-    // Validation checks
-    if(max_size < min_size || min_size === 0 || max_size === 0) {
-      return res.status(400).json({error: 'Invalid team size parameters.'});
-    }
-
-    // Check unit exists
-    const [unit] = await db.query('SELECT * FROM units WHERE id = ?', [id]);
-    if (!unit.length) return res.status(404).json({ error: 'Unit not found.' });
-
-    // Update unit name and semester
-    await db.query(
-      'UPDATE units SET unit_name = ?, semester = ? WHERE id = ?',
-      [unit_name, semester, id]
-    );
-
-    // Update constraints
-    await db.query(
-      'UPDATE unit_constraints SET min_size = ?, max_size = ?, max_new = ? WHERE unit_id = ?',
-      [min_size, max_size, max_new, id]
-    );
-
-    // Unlock locked groups in the unit to force revalidation of unit constraints
-    const [lockedGroups] = await db.query('SELECT * FROM \`groups\` WHERE unit_id = ? and status = ?', [id, 'locked']);
     
-    for(let i = 0; i < lockedGroups.length; i++) {
-      await db.query('UPDATE \`groups\` SET status = ? WHERE group_id = ?', ['forming', lockedGroups[i].group_id]);
-    }
+    const submitType = req.body.submitType;
+    // update unit details
+    if(submitType === 'details') {
+      const { unit_name, semester, min_size, max_size, max_new } = req.body;
+      // Validation checks
+      if(max_size < min_size || min_size === 0 || max_size === 0) {
+        return res.status(400).json({error: 'Invalid team size parameters.'});
+      }
 
-    return res.status(200).json({ ok: true });
+      // Check unit exists
+      const [unit] = await db.query('SELECT * FROM units WHERE id = ?', [id]);
+      if (!unit.length) return res.status(404).json({ error: 'Unit not found.' });
+
+      // Update unit name and semester
+      const updateUnit = await db.query(
+        'UPDATE units SET unit_name = ?, semester = ? WHERE id = ?',
+        [unit_name, semester, id]
+      );
+      if(!updateUnit) {
+        return res.status(500).json({error: 'Failed to update unit details - encountered a problem with the server'});
+      }
+
+      // Update constraints
+      const constraintUpdate = await db.query(
+        'UPDATE unit_constraints SET min_size = ?, max_size = ?, max_new = ? WHERE unit_id = ?',
+        [min_size, max_size, max_new, id]
+      );
+      if(!constraintUpdate) {
+        return res.status(500).json({error: 'Failed to update unit constraints - encountered a problem with the server'});
+      }
+
+      // Unlock locked groups in the unit to force revalidation of unit constraints
+      const [lockedGroups] = await db.query('SELECT * FROM \`groups\` WHERE unit_id = ? and status = ?', [id, 'locked']);
+      
+      for(let i = 0; i < lockedGroups.length; i++) {
+        const unlockGroup = await db.query('UPDATE \`groups\` SET status = ? WHERE group_id = ?', ['forming', lockedGroups[i].group_id]);
+        if(!unlockGroup) {
+          return res.status(500).json({error: `Error unlocking group ${lockedGroups[i].group_id} - encountered a problem with the server`});
+        }
+      }
+
+      return res.status(200).json({ ok: true });
+    }
+    
+    //update unit timeslots
+    if(submitType === 'timeslot') {
+      const {timeslots} = req.body;
+      
+      //Check that a unit exists
+      const [unitExists] = await db.query('SELECT * FROM units WHERE id = ?', [id]);
+      if(!unitExists.length) {
+        return res.status(404).json({error: 'Unit not found.'});
+      }
+
+      //Grab the current slots in the unit and check for which ones need removal.
+      const [currentSlots] = await db.query('SELECT id, slot FROM timeslots WHERE unit_id = ?', [id]);
+      const slotsForDelete = currentSlots.filter(slot1 => !timeslots.some(slot2 => slot2.id === slot1.id));
+
+      //Delete slots that have been removed
+      for(let i = 0; i < slotsForDelete.length; i++) {
+        let deletion = await db.query(
+          `DELETE FROM timeslots WHERE id = ? && slot = ?`,
+          [slotsForDelete[i].id, slotsForDelete[i].slot]
+        );
+        if(!deletion) {
+          return res.status(500).json({error: 'Failed to delete timeslots - encountered a problem with the server'});
+        }
+      }
+
+      //Add new slots
+      for(let i = 0; i < timeslots.length; i++) {
+        let update = await db.query(
+          `INSERT INTO timeslots (slot, unit_id) VALUES (?, ?)
+          ON DUPLICATE KEY UPDATE id=id`,
+          [timeslots[i].slot, id]
+        );
+        if(!update) {
+          return res.status(500).json({error: 'Failed to update timeslots - encountered a problem with the server'});
+        }
+      }
+      return res.status(200).json({ok: true});
+    }
   }
 
   // DELETE — remove unit, its constraints and enrolments
