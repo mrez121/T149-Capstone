@@ -123,20 +123,39 @@ export default function Dashboard() {
    * @const newOk:        Variable to check if newCount is accecptable
    * @const slotOk:       Variable to check if all members of the group have a shared availability slot
    * @const allOk:        Variable to check if every constraint has been met by the group
-   * @const seatsNeeded:  How many additional members are needed for the sizeOk variable to become valid (feedback variable for user)
    * @const openSeats:    How many spaces are available within the group up to the maximum group size for the unit (feedback variable for user)
    */
   const memberCount = myMembers.length;
   const newCount = myMembers.filter((m) => m.is_new).length;
-  const sizeOk = memberCount <= myGroupConstraints.max_size;
-  const newOk = newCount <= myGroupConstraints.max_new;
-  let   slotOk = !!myGroup?.shared_slot;
-  if(memberCount === 1) {
-    slotOk = mySlots;
-  }
+  const maxSize = myGroupConstraints.max_size ?? null;
+  const maxNew = myGroupConstraints.max_new ?? null;
+  const hasConstraints = Number.isInteger(maxSize) && maxSize > 0 &&
+    Number.isInteger(maxNew) && maxNew >= 0;
+  const sizeOk = hasConstraints && memberCount <= maxSize;
+  const newOk = hasConstraints && newCount <= maxNew;
+  // A solo group shares its creator's availability. An empty array is not a match.
+  const sharedSlot = memberCount === 1 ? mySlots[0] || null : myGroup?.shared_slot || null;
+  const slotOk = Boolean(sharedSlot);
   const allOk = sizeOk && newOk && slotOk;
-  const seatsNeeded = Math.max(0, myGroupConstraints.min_size - memberCount);
-  const openSeats = Math.max(0, myGroupConstraints.max_size - memberCount);
+  const isLocked = myGroup?.status === 'locked';
+  const openSeats = hasConstraints ? Math.max(0, maxSize - memberCount) : 0;
+  const groupSizeLabel = `${memberCount} / max ${maxSize ?? '—'}`;
+  const capacityMessage = isLocked
+    ? 'Membership is locked.'
+    : !hasConstraints
+      ? 'Group limits unavailable.'
+      : !sizeOk
+        ? 'Group exceeds the member limit.'
+        : openSeats === 0
+          ? 'No places available.'
+          : `${openSeats} place${openSeats === 1 ? '' : 's'} available.`;
+  const lockingFeedback = !hasConstraints
+    ? 'Group limits could not be loaded. Refresh the page or contact your unit coordinator.'
+    : [
+        !sizeOk && `Group exceeds the maximum of ${maxSize} members.`,
+        !newOk && `Group exceeds the maximum of ${maxNew} new students.`,
+        !slotOk && 'A shared tutorial time is required. Check member availability.',
+      ].filter(Boolean).join(' ');
 
   /**
    * @const isCreator: Check to see if current user is the creator of the group they are in.
@@ -277,7 +296,7 @@ export default function Dashboard() {
     const data = await res.json();
 
     if (res.ok) {
-      showToast('Group locked and confirmed valid!');
+      showToast('Group locked. Membership changes are now disabled.');
       loadData();
     } else {
       showToast(data.errors?.join(' ') || data.error, 'error');
@@ -506,11 +525,11 @@ export default function Dashboard() {
                   }`}
                 >
                   <span>
-                    {sizeOk ? '✅' : '❌'} Team size
+                    {sizeOk ? '✅' : '❌'} Group size
                   </span>
 
                   <span className="cv">
-                    {memberCount} / {myGroupConstraints.max_size} members
+                    {groupSizeLabel}
                   </span>
                 </div>
 
@@ -524,7 +543,7 @@ export default function Dashboard() {
                   </span>
 
                   <span className="cv">
-                    {newCount} / max {myGroupConstraints.max_new}
+                    {newCount} / max {maxNew ?? '—'}
                   </span>
                 </div>
 
@@ -538,7 +557,7 @@ export default function Dashboard() {
                   </span>
 
                   <span className="cv">
-                    {myGroup.shared_slot || 'Not found yet'}
+                    {sharedSlot || 'No shared time'}
                   </span>
                 </div>
 
@@ -549,28 +568,27 @@ export default function Dashboard() {
                     </div>
                   ) : (
                     <div className="not-ok">
-                      Invite more members to meet all
-                      constraints.
+                      {lockingFeedback}
                     </div>
                   ))}
 
                 {myGroup.status === 'locked' && (
                   <div className="all-ok">
-                    🔒 Group locked and confirmed valid.
+                    🔒 Group locked. Membership changes are disabled.
                   </div>
                 )}
               </>
             ) : (
               <>
                 <div className="constraint-row c-info">
-                  <span>👥 Team size</span>
-                  <span className="cv">{myGroupConstraints.max_size} members</span>
+                  <span>👥 Group size</span>
+                  <span className="cv">Max {maxSize ?? '—'} members</span>
                 </div>
 
                 <div className="constraint-row c-info">
                   <span>🎓 New students</span>
                   <span className="cv">
-                    Max {myGroupConstraints.max_new} per group
+                    Max {maxNew ?? '—'} per group
                   </span>
                 </div>
 
@@ -608,7 +626,7 @@ export default function Dashboard() {
                   <div className="active-group-hero">
                     <div>
                       <div className="group-kicker">
-                        Current team
+                        Current group
                       </div>
                       
                       <div className="group-name active-group-name">
@@ -638,19 +656,15 @@ export default function Dashboard() {
 
                     <div
                       className={`group-health-pill ${
-                        allOk ? 'ready' : 'needs-work'
+                        isLocked || allOk ? 'ready' : 'needs-work'
                       }`}
                     >
                       <strong>
-                        {allOk ? 'Ready to lock' : 'Building team'}
+                        {isLocked ? 'Group locked' : allOk ? 'Ready to lock' : 'Cannot lock yet'}
                       </strong>
 
                       <span>
-                        {seatsNeeded > 0
-                          ? `${seatsNeeded} more needed`
-                          : `${openSeats} open seat${
-                              openSeats === 1 ? '' : 's'
-                            }`}
+                        {capacityMessage}
                       </span>
                     </div>
                   </div>
@@ -661,8 +675,8 @@ export default function Dashboard() {
                         sizeOk ? 'metric-ok' : 'metric-warn'
                       }`}
                     >
-                      <span>Team size</span>
-                      <strong>{memberCount}/{myGroupConstraints.max_size}</strong>
+                      <span>Group size</span>
+                      <strong>{groupSizeLabel}</strong>
                     </div>
 
                     <div
@@ -671,7 +685,7 @@ export default function Dashboard() {
                       }`}
                     >
                       <span>New students</span>
-                      <strong>{newCount}/{myGroupConstraints.max_new}</strong>
+                      <strong>{newCount} / max {maxNew ?? '—'}</strong>
                     </div>
 
                     <div
@@ -681,7 +695,7 @@ export default function Dashboard() {
                     >
                       <span>Shared slot</span>
                       <strong>
-                        {myGroup.shared_slot || 'Missing'}
+                        {sharedSlot || 'No shared time'}
                       </strong>
                     </div>
                   </div>
@@ -689,17 +703,16 @@ export default function Dashboard() {
                   <div className="active-members-heading">
                     <div>
                       <div className="section-label members-label">
-                        Team seats
+                        Group members
                       </div>
 
                       <p>
-                        {memberCount} member{memberCount === 1 ? '' : 's'} joined, {openSeats} seat
-                        {openSeats === 1 ? '' : 's'} still open.
+                        {memberCount} member{memberCount === 1 ? '' : 's'} joined. {capacityMessage}
                       </p>
                     </div>
 
                     <span className="group-seat-count">
-                      {memberCount}/{myGroupConstraints.max_size} filled
+                      {groupSizeLabel}
                     </span>
                   </div>
 
@@ -735,8 +748,8 @@ export default function Dashboard() {
                       </div>
                     ))}
 
-                    {/* Empty seat cards make the remaining group capacity visible at a glance. */}
-                    {Array.from({ length: openSeats }).map(
+                    {/* Only forming groups have places available for new members. */}
+                    {!isLocked && Array.from({ length: openSeats }).map(
                       (_, index) => (
                         <div
                           key={`open-seat-${index}`}
@@ -748,7 +761,7 @@ export default function Dashboard() {
 
                           <div className="member-info">
                             <div className="member-name">
-                              Open seat
+                              Available place
                             </div>
 
                             <div className="member-id">
@@ -778,8 +791,8 @@ export default function Dashboard() {
                           sizeOk ? 'complete' : 'attention'
                         }`}
                       >
-                        <span>Team size</span>
-                        <strong>{memberCount}/{myGroupConstraints.min_size} minimum</strong>
+                        <span>Group size</span>
+                        <strong>{groupSizeLabel}</strong>
                       </div>
 
                       <div
@@ -788,7 +801,7 @@ export default function Dashboard() {
                         }`}
                       >
                         <span>New-student limit</span>
-                        <strong>{newCount}/{myGroupConstraints.max_new} new students</strong>
+                        <strong>{newCount} / max {maxNew ?? '—'} new students</strong>
                       </div>
 
                       <div
@@ -798,7 +811,7 @@ export default function Dashboard() {
                       >
                         <span>Shared tutorial</span>
                         <strong>
-                          {myGroup.shared_slot || 'Not matched'}
+                          {sharedSlot || 'No shared time'}
                         </strong>
                       </div>
                     </div>
@@ -807,7 +820,7 @@ export default function Dashboard() {
                     myGroup.status === 'forming' ? (
                       <>
                         <p className="action-help">
-                          Invite classmates by student ID, or browse
+                          Invite classmates by TeamUp ID, or browse
                           the directory to find available teammates.
                         </p>
 
@@ -836,7 +849,7 @@ export default function Dashboard() {
                     ) : (
                       <p className="action-help">
                         {myGroup.status === 'locked'
-                          ? 'This group is locked and confirmed.'
+                          ? 'Your unit coordinator must unlock this group before members can join or leave.'
                           : 'Only the group creator can send invitations.'}
                       </p>
                     )}
@@ -1012,12 +1025,12 @@ export default function Dashboard() {
 
                         <span
                           className={
-                            group.member_count >= myGroupConstraints.min_size
+                            group.member_count >= maxSize
                               ? 'warn'
                               : 'ok'
                           }
                         >
-                          👥 {group.member_count}/{myGroupConstraints.max_size} members
+                          👥 {group.member_count} / max {maxSize ?? '—'} members
                         </span>
 
                         <span
