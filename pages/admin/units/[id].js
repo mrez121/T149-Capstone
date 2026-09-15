@@ -33,7 +33,9 @@ export default function EditUnitPage() {
     max_size:  5,
     max_new:   2,
   });
+  const [unitCode, setUnitCode] = useState('');
   const [unitSlots, setUnitSlots] = useState([]);
+  const [timeslotInput, setTimeslotInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
@@ -54,8 +56,8 @@ export default function EditUnitPage() {
             max_size:  data.unit.max_size ?? 5,
             max_new:   data.unit.max_new  ?? 2,
           });
+          setUnitCode(data.unit.unit_code);
           setUnitSlots(data.timeslots);
-          console.log(data);
         }
         setLoading(false);
       });
@@ -105,6 +107,7 @@ export default function EditUnitPage() {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
+          submitType: 'details',
           unit_name: form.unit_name,
           semester:  form.semester,
           min_size:  Number(form.min_size),
@@ -121,6 +124,84 @@ export default function EditUnitPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  /**
+   * @function handleTimeslotInput
+   * This function updates the timeslot input field.
+   * @param {*} e a react event
+   */
+  const handleTimeslotInput = (e) => {
+    setTimeslotInput((timeslotInput) => {
+      return e.target.value;
+    });
+  }
+
+  /**
+   * @function addSlot
+   * Adds a new timeslot to the unit
+   */
+  function addSlot() {
+    const timeslot = timeslotInput;
+    const lastSlot = unitSlots.at(-1);
+    if(timeslot !== ''){
+      if(lastSlot === undefined) {
+        setUnitSlots(unitSlots => [...unitSlots, {id: 0, slot: timeslot}]);
+      }
+      else {
+        setUnitSlots(unitSlots => [...unitSlots, {id: (lastSlot.id + 1), slot: timeslot}]);
+      }
+    }
+  }
+
+  /**
+   * @function removeSlot
+   * Removes a timeslot from the unit
+   * @param {*} e A react event
+   */
+  function removeSlot(e) {
+    const value = e.target.value;
+
+    if(unitSlots.filter(slot => slot.slot === value).length > 0) {
+      
+      setUnitSlots(unitSlots.filter(slot => slot.slot !== value));     
+            
+      showToast('Timeslot removed. Save changes before leaving page.')
+    }
+  }
+
+  /**
+   * @function handleAvailabilitySub
+   * @async
+   * Submits the timeslot form to the api.
+   * @param {*} e A react event
+   */
+  async function handleAvailabilitySub(e) {
+    e.preventDefault();
+    setError('');
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/units/${id}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          submitType: 'timeslot',
+          timeslots: unitSlots
+        }),
+      });
+      const data = await res.json();
+      if(res.ok) {
+        showToast(`${unitCode} timeslots updated successfully.`);
+      }
+      else {
+        setError(data.error || 'Failed to update unit timeslots.');
+      }
+    } catch {
+      setError('Unable to save timeslot changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+
   }
 
   if (loading) return (
@@ -194,24 +275,46 @@ export default function EditUnitPage() {
             </div>
           </div>
 
-          <div className='aconstraints-preview'>
-            <div className='apreview-label'>Current tutorial timeslots</div>
-            <ul>
-              {unitSlots.map((item) => {
-                return (
-                  <button
-                    key={item.id}
-                    type='button'
-                    className='btn btn-red'
-                    value={item.slot}
-                  >
-                    {item.slot}
-                  </button>
-                )
-              })}
-            </ul>
+          <div className="abtn-row">
+            <button className="abtn abtn-blue" type="submit" disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </button>
+            <Link href="/admin/units" className="abtn abtn-ghost">Cancel</Link>
           </div>
+        </form>
+      </div>
 
+      <div className='acontainer-sm'>
+        <form onSubmit={handleAvailabilitySub} className="aform-card">
+        
+        
+          <div className='adivider'/>
+            <div className='asection-label'>Unit tutorial timeslots</div>
+            <div className='aconstraints-preview'>
+              <div className='apreview-label'>Current tutorial timeslots</div>
+              <ul>
+                {unitSlots.map((item) => {
+                  return (
+                    <button
+                      key={item.id}
+                      type='button'
+                      className='btn btn-red'
+                      value={item.slot}
+                      onClick={removeSlot}
+                    >
+                      {item.slot}
+                    </button>
+                  )
+                })}
+              </ul>
+            </div>
+
+            <div className='afield'>
+              <label>Add timeslot</label>
+              <input name='timeslot' value={timeslotInput} onChange={handleTimeslotInput} placeholder='e.g., MON-09:00'/>
+              <button className='abtn abtn-teal' type='button' onClick={() => addSlot()}>Add timeslot</button>
+            </div>
+            
           <div className="abtn-row">
             <button className="abtn abtn-blue" type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Save changes'}
