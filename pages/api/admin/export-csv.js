@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     JOIN unit_enrolments ue ON ue.student_id = s.student_id
     WHERE ue.unit_id = ?
     ORDER BY s.name ASC
-  `, [unit.unit_code]);
+  `, [unit.id]);
 
   // Get all groups in this unit
   const [groups] = await db.query(`
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     FROM \`groups\` g
     WHERE g.unit_id = ?
     ORDER BY g.name ASC
-  `, [unit.unit_code]);
+  `, [unit.id]);
 
   // Get all group members
   const [members] = await db.query(`
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     JOIN \`groups\` g ON g.group_id = gm.group_id
     WHERE g.unit_id = ?
     ORDER BY gm.group_id, s.name ASC
-  `, [unit.unit_code]);
+  `, [unit.id]);
 
   // Find students not in any group
   const studentsInGroups   = new Set(members.map(m => m.student_id));
