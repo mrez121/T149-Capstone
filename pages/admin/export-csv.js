@@ -61,7 +61,7 @@ export default function ExportCsvPage() {
       {/* Navigation */}
       <nav className="anav">
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
-        <Link href="/tutor_dash" className="anav-link">← Dashboard</Link>
+        <Link href="/tutor_dash" className="anav-link anav-button">← Dashboard</Link>
       </nav>
 
       <div className="acontainer-sm">
