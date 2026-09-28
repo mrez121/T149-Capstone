@@ -272,6 +272,54 @@ nav {
   flex-shrink: 0;
 }
 
+/* Keep the invitation identifier visible and explain how students use it. */
+.teamup-id-panel {
+  display: grid;
+  grid-template-columns: auto minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 15px 18px;
+  background: lch(from var(--teal) l c h / 0.05);
+  border: 1px solid lch(from var(--teal) l c h / 0.2);
+  border-left: 3px solid var(--teal);
+  border-radius: 8px;
+}
+
+.teamup-id-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.teamup-id-label,
+.invite-id-label {
+  color: var(--gray-mid-A);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.teamup-id-value {
+  color: var(--teal);
+  font-family: monospace;
+  font-size: 20px;
+  letter-spacing: 0;
+}
+
+.teamup-id-panel p {
+  margin: 0;
+  color: var(--gray-mid-A);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.teamup-id-copy-button {
+  gap: 7px;
+  flex-shrink: 0;
+}
+
 .tutorial-card,
 .constraint-card {
   min-height: 286px;
@@ -667,8 +715,24 @@ nav {
 }
 
 .empty-seat-card {
+  width: 100%;
+  color: inherit;
+  text-align: left;
   border-style: dashed;
   background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.empty-seat-card:hover {
+  background: lch(from var(--teal) l c h / 0.06);
+  border-color: lch(from var(--teal) l c h / 0.5);
+  transform: translateY(-1px);
+}
+
+.empty-seat-card:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
 }
 
 .empty-seat-card .member-name {
@@ -756,6 +820,17 @@ nav {
   padding: 0;
   background: transparent;
   border: none;
+}
+
+.invite-id-label {
+  color: var(--gray-light-A);
+}
+
+.invite-id-help {
+  margin: -3px 0 2px;
+  color: var(--gray-mid-A);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .active-action-row {
@@ -1588,6 +1663,15 @@ nav {
     width: 100%;
   }
 
+  .teamup-id-panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 16px;
+  }
+
+  .teamup-id-panel p {
+    grid-column: 1 / -1;
+  }
+
   .members-grid {
     grid-template-columns: 1fr;
   }
@@ -1690,6 +1774,18 @@ nav {
 
   .nav-name {
     display: none;
+  }
+
+  .teamup-id-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .teamup-id-copy-button {
+    width: 100%;
+  }
+
+  .teamup-id-panel p {
+    grid-column: auto;
   }
 
   .constraint-row {

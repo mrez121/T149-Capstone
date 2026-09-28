@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { Copy } from 'lucide-react';
 
 /**
  * @default Dashboard
@@ -112,6 +113,18 @@ export default function Dashboard() {
   function showToast(msg, type = 'success') {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4500);
+  }
+
+  /** Copy the current student's TeamUp ID so it can be shared for invitations. */
+  async function handleCopyTeamUpId() {
+    if (!student?.teamupId) return;
+
+    try {
+      await navigator.clipboard.writeText(student.teamupId);
+      showToast('TeamUp ID copied. Share it with classmates who need to invite you.');
+    } catch {
+      showToast('Unable to copy the TeamUp ID. Select the ID and copy it manually.', 'error');
+    }
   }
 
   
@@ -375,7 +388,7 @@ export default function Dashboard() {
         <div className="nav-right">
           {student && (
             <span className="nav-name">
-              {student.name} - {student.teamupId}
+              {student.name}
 
               <span
                 className={`badge ${
@@ -411,6 +424,34 @@ export default function Dashboard() {
           <div className="dashboard-error" role="alert">
             {loadError}
           </div>
+        )}
+
+        {student?.teamupId && (
+          <section className="teamup-id-panel" aria-labelledby="teamup-id-heading">
+            <div className="teamup-id-copy">
+              <span className="teamup-id-label" id="teamup-id-heading">
+                Your TeamUp ID
+              </span>
+
+              <strong className="teamup-id-value">{student.teamupId}</strong>
+            </div>
+
+            <p>
+              Share this ID with classmates so they can invite you to their group.
+              It is different from your student number.
+            </p>
+
+            <button
+              className="btn btn-teal teamup-id-copy-button"
+              type="button"
+              onClick={handleCopyTeamUpId}
+              title="Copy TeamUp ID"
+              aria-label={`Copy TeamUp ID ${student.teamupId}`}
+            >
+              <Copy size={16} aria-hidden="true" />
+              Copy ID
+            </button>
+          </section>
         )}
 
         {/* Student Directory entry point for both grouped and ungrouped students. */}
@@ -748,12 +789,15 @@ export default function Dashboard() {
                       </div>
                     ))}
 
-                    {/* Only forming groups have places available for new members. */}
+                    {/* Empty places provide a direct, accessible route to the directory. */}
                     {!isLocked && Array.from({ length: openSeats }).map(
                       (_, index) => (
-                        <div
+                        <button
                           key={`open-seat-${index}`}
+                          type="button"
                           className="member-card active-member-card empty-seat-card"
+                          onClick={() => router.push('/students')}
+                          aria-label={`Browse the Student Directory for available place ${memberCount + index + 1}`}
                         >
                           <div className="avatar empty-seat-avatar">
                             +
@@ -772,7 +816,7 @@ export default function Dashboard() {
                           <span className="badge badge-blue">
                             Slot {memberCount + index + 1}
                           </span>
-                        </div>
+                        </button>
                       )
                     )}
                   </div>
@@ -828,7 +872,12 @@ export default function Dashboard() {
                           onSubmit={handleInviteStudent}
                           className="invite-section active-invite-section"
                         >
+                          <label className="invite-id-label" htmlFor="invite-teamup-id">
+                            Classmate TeamUp ID
+                          </label>
+
                           <input
+                            id="invite-teamup-id"
                             className="text-input"
                             placeholder="TeamUp ID e.g. TU-123456"
                             value={inviteTarget}
@@ -837,6 +886,11 @@ export default function Dashboard() {
                             }
                             required
                           />
+
+                          <p className="invite-id-help">
+                            Enter their TeamUp ID (TU-XXXXXX), not their student number.
+                            They can copy it from their Dashboard.
+                          </p>
 
                           <button
                             className="btn btn-blue"

@@ -56,10 +56,13 @@ hwang - Hongyun Wang (Admin)
 ## How the system works
 1. Students discuss and agree on a group outside the system
 2. One student creates a group (Public or Private)
-3. Creator invites teammates by entering their student ID
+3. Creator invites teammates by entering their TeamUp ID (`TU-XXXXXX`)
 4. Invited students see a notification on their dashboard to accept or decline
 5. Constraint panel updates live as members join
 6. Creator locks the group once all 3 constraints are green
+
+For step-by-step student and administrator instructions, see
+[USER_GUIDE.md](USER_GUIDE.md).
 
 ## Constraints enforced
 1. Team size: 4-5 members
