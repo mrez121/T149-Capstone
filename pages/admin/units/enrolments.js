@@ -5,6 +5,7 @@ import {useState, useEffect} from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
+import styles from '../../../styles/StudentEnrolments.module.css';
 
 /**
  * @function enrolmentsPage
@@ -106,13 +107,13 @@ export default function enrolmentsPage() {
       <Head><title>TeamUp — Enrolments</title></Head>
       {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
 
-      <nav className="anav">
+      <nav className={`anav ${styles.nav}`}>
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
         <Link href="/tutor_dash" className="anav-link anav-button">← Dashboard</Link>
         <button className="logout-btn" onClick={handleLogout}>Sign out</button>
       </nav>
 
-      <main className="acontainer">
+      <main className={`acontainer ${styles.page}`}>
         <div className="apage-header">
           <div>
             <h1 className="apage-title">Student Enrolments</h1>
@@ -153,16 +154,25 @@ export default function enrolmentsPage() {
           )}
         </section>
 
-        {/*List construct of students in a unit */}
+        {/* Compact enrolment list, using the same table treatment as the student directory. */}
         <section className="apage-section">
-          <div className="asection-header">
+          <div className={`asection-header ${styles.resultsHeader}`}>
             <div>
               <h2 className="asection-title">Enrolment Results</h2>
               <p className="asection-sub">
                 {selectedUnit ? `Students enrolled in ${selectedUnit}` : 'Select a unit above to view its students'}
               </p>
             </div>
+            {selectedUnit && (
+              <span className={styles.studentCount} role="status">
+                {enrolments.length} student{enrolments.length === 1 ? '' : 's'} enrolled
+              </span>
+            )}
           </div>
+
+          {enrolments.length > 0 && (
+            <p className={styles.scrollHint}>Scroll sideways to view all columns.</p>
+          )}
 
           {enrolments.length === 0 ? (
             <div className="aempty aempty-panel aempty-compact">
@@ -172,17 +182,31 @@ export default function enrolmentsPage() {
               </div>
             </div>
           ) : (
-            <div className="aresults-grid">
-            {enrolments.map(e => (
-              <div key={e.student_id} className="adata-card">
-                <div className="adata-name">{e.name}</div>
-                <div className="adata-id">Student ID: {e.student_id}</div>
-                <div className="adata-meta">
-                  <span>Email</span>
-                  <strong>{e.email}</strong>
-                </div>
-              </div>
-            ))}
+            <div
+              className={styles.tableWrap}
+              role="region"
+              aria-label={`Students enrolled in ${selectedUnit}`}
+              tabIndex={0}
+            >
+              <table className={styles.table}>
+                <caption className={styles.srOnly}>Students enrolled in {selectedUnit}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Student ID</th>
+                    <th scope="col">Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrolments.map(e => (
+                    <tr key={e.student_id}>
+                      <td className={styles.studentName}>{e.name}</td>
+                      <td className={styles.studentId}>{e.student_id}</td>
+                      <td>{e.email || 'Not provided'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
@@ -220,13 +244,6 @@ export default function enrolmentsPage() {
         .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:3px 10px; font-size:12px; }
         .aunit-stats { display:flex; gap:16px; font-size:13px; color:#8B949E; margin-top:4px; }
         .aunit-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
-        .aresults-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
-        .adata-card { background:#161B22; border:1px solid #30363D; border-radius:12px; padding:20px; }
-        .adata-name { color:#E6EDF3; font-size:16px; font-weight:650; }
-        .adata-id { color:#8B949E; font-family:monospace; font-size:13px; margin-top:4px; }
-        .adata-meta { display:flex; flex-direction:column; gap:4px; margin-top:16px; padding-top:14px; border-top:1px solid #30363D; }
-        .adata-meta span { color:#8B949E; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
-        .adata-meta strong { color:#E6EDF3; font-size:13px; font-weight:500; overflow-wrap:anywhere; }
       `}</style>
     </>
   );

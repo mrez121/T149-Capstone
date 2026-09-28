@@ -190,7 +190,14 @@ export default function adminDashboard() {
                             className="btn-row"
                             style={{marginTop:20}}
                         >
-                            <Link href="/admin/export-csv" className="btn btn-blue">
+                            <Link
+                                href="/admin/export-csv"
+                                className="btn btn-blue"
+                                style={{
+                                    textDecoration:"none",
+                                    display:"inline-block"
+                                }}
+                            >
                                 Export CSV
                             </Link>
                             
