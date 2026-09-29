@@ -3,6 +3,7 @@ import {useState, useEffect} from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
+import AdminToast from '../components/AdminToast';
 
 /**
  * @function adminDashboard
@@ -45,11 +46,7 @@ export default function adminDashboard() {
                 <title>TeamUp - Admin Dashboard</title>
             </Head>
 
-            {toast && (
-                <div className = {`toast toast-${toast.type}`}>
-                    {toast.msg}
-                </div>
-            )}
+            <AdminToast toast={toast} />
 
             <nav>
                 <div className="logo">

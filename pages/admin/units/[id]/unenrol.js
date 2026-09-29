@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { useSearchParams } from 'next/navigation';
 import Head from 'next/head';
 import Link from 'next/link';
+import AdminToast from '../../../../components/AdminToast';
 
 /**
  * @function UnenrolStudentPage
@@ -91,7 +92,7 @@ export default function UnenrolStudentPage() {
     return(
         <>
             <Head><title>TeamUp - Unenrol student</title></Head>
-            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+            <AdminToast toast={toast} />
 
             <nav className='anav'>
                 <div className='anav-logo'>Team<span>Up</span> <span className='admin-tag'>Admin</span></div>

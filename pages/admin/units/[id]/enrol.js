@@ -6,6 +6,7 @@ import { useRouter }        from 'next/router';
 import { useSearchParams }  from 'next/navigation';
 import Head                 from 'next/head';
 import Link                 from 'next/link';
+import AdminToast from '../../../../components/AdminToast';
 
 /**
  * @function EnrolStudentPage
@@ -92,7 +93,7 @@ const unitCode = searchParams.get('unitCode');
     return(
         <>
             <Head><title>TeamUp - Enrol student</title></Head>
-            {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+            <AdminToast toast={toast} />
 
             <nav className="anav">
                 <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>

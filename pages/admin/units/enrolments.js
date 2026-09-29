@@ -5,6 +5,7 @@ import {useState, useEffect} from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
+import AdminToast from '../../../components/AdminToast';
 import styles from '../../../styles/StudentEnrolments.module.css';
 
 /**
@@ -105,7 +106,7 @@ export default function enrolmentsPage() {
   return (
     <>
       <Head><title>TeamUp — Enrolments</title></Head>
-      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+      <AdminToast toast={toast} />
 
       <nav className={`anav ${styles.nav}`}>
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
@@ -213,9 +214,6 @@ export default function enrolmentsPage() {
       </main>
 
       <style jsx global>{`
-        .toast { position:fixed; top:20px; right:20px; z-index:999; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:500; }
-        .toast-success { background:rgba(63,185,80,.15); border:1px solid rgba(63,185,80,.4); color:#3FB950; }
-        .toast-error   { background:rgba(248,81,73,.15); border:1px solid rgba(248,81,73,.4); color:#F85149; }
         .anav { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid #30363D; background:#161B22; }
         .anav-logo { font-size:20px; font-weight:700; color:#E6EDF3; display:flex; align-items:center; gap:10px; }
         .anav-logo span { color:#00C9A7; }
