@@ -73,7 +73,7 @@ export default function CsvUploadPage() {
       {/* Navigation */}
       <nav className="anav">
         <div className="anav-logo">Team<span>Up</span> <span className="admin-tag">Admin</span></div>
-        <Link href="/admin/units/enrolments" className="anav-link">← Back to enrolments</Link>
+        <Link href="/admin/units/enrolments" className="anav-link anav-button">← Back to enrolments</Link>
       </nav>
 
       <div className="acontainer-sm">
