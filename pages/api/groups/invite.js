@@ -2,9 +2,10 @@
 // Creator invites a student by their student ID.
 // No invite codes — private groups are invite-only via student ID.
 
-import { getDb }        from '../../../lib/db';
-import { requireAuth }  from '../../../lib/session';
-import { validateJoin } from '../../../lib/constraints';
+import { getDb }           from '../../../lib/db';
+import { requireAuth }     from '../../../lib/session';
+import { validateJoin }    from '../../../lib/constraints';
+import { sendInviteEmail } from '../../../lib/email';
 
 /**
  * This function handles the HTTP requests for creating group invite 
@@ -100,6 +101,14 @@ export default async function handler(req, res) {
       [groupId, student.studentId, targetRows[0].student_id]
     );
   }
+
+  // Send email notification to the invited student
+  await sendInviteEmail(
+    targetRows[0].email,
+    targetRows[0].name,
+    student.name,
+    grpRows[0].name
+  );
 
   return res.status(200).json({ ok: true, message: `Invite sent to ${targetRows[0].name}` });
 }
