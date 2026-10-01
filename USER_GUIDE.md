@@ -1,6 +1,6 @@
 # TeamUp user guide
 
-Last updated: 28 September 2026
+Last updated: 1 October 2026
 
 This guide covers the main student and administrator workflows used during
 assessment testing. Use the demo accounts and password listed in `README.md`.
@@ -66,14 +66,43 @@ save it.
 
 ### Student enrolments
 
-Open **Student Enrolments**, select a unit, and use one of the following:
+Open **Student Enrolments** from the Admin Dashboard and select the unit's
+**Enrolments** button. The **Enrolment Results** table shows **Name**, **Student
+ID** and **Email**, with the total number of enrolled students above it. On a
+narrow screen, scroll sideways within the table to view all columns.
+
+**No enrolments selected** means a unit has not been selected yet. **No students
+are enrolled in [unit code]** means the selected unit has no enrolled students.
+
+![Student enrolment results and student count](docs/images/enrolment-results.png)
+
+The screenshot uses a local test unit; choose the relevant unit in your own
+installation.
+
+Use the following actions on the unit card:
 
 - **Enrol student** for one student.
 - **Unenrol student** to remove an existing enrolment.
 - **Upload CSV** for a list of student numbers.
 
-The CSV must contain one student number per line. It may start with the header
-`student_id`:
+The single-student forms require a student number, name and email that match an
+existing account. For removal, use the details in **Enrolment Results**. For
+addition, obtain the existing account details from the administrator.
+
+If **Student not found.** appears, check all three fields. If the student is
+already enrolled, confirm their current unit assignment with the administrator.
+
+After submitting, select **Back to enrolments** and reload the unit's list to
+check the result. **Cancel** returns without submitting the form.
+
+Temporary notifications appear below the navigation and disappear after a few
+seconds. Navigation buttons remain accessible while a notification is shown.
+
+![Admin notification below the navigation](docs/images/admin-notification.png)
+
+For CSV upload, check the **Unit** selection on the upload page before
+submitting. The CSV must contain one student number per line, using existing
+student accounts. It may start with the header `student_id`:
 
 ```csv
 student_id
@@ -81,15 +110,23 @@ n10000001
 n10000002
 ```
 
+An [example CSV](testing/fixtures/enrolment-example.csv) is included. Check that
+its demo student numbers exist in your installation before using it.
+
 After upload, review the summary for successfully enrolled, already enrolled
-and unknown student numbers. Include a known test CSV with the assessment
-submission so the import can be repeated consistently.
+and unknown student numbers. Return to **Student Enrolments** and reload the
+selected unit's list to check the result.
 
 ### Groups and exports
 
 Use **Manage Groups** to select a unit, view group members and unlock a locked
-group when corrections are required. Use **Export CSV** to download current
-unit, student and group data.
+group when corrections are required. Use **Export CSV**, select a unit, then
+select **Download CSV** to download current unit, student and group data.
+
+The export includes student numbers, full names, emails, cohorts, new/returning
+status, group details, shared tutorial slots and constraint results. Names are
+stored in one column. Students without a group are marked `NO_GROUP`. For an
+enrolment upload, copy only the student numbers into the format shown above.
 
 ## Setup and troubleshooting
 
@@ -102,3 +139,8 @@ unit, student and group data.
   and unit assignment before treating it as a UI problem.
 - If the Directory is empty, clear its filters and confirm that the signed-in
   student and the expected classmates are enrolled in the same unit.
+- For admin page testing, check a populated unit and an empty unit. Confirm the
+  student count and empty message, then check that notifications leave the
+  navigation accessible and the table can be scrolled on a narrow screen.
+- If CSV upload fails, check the unit's current enrolments and report the
+  problem to the team. Use **Enrol student** for individual changes.
