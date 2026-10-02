@@ -17,26 +17,40 @@ export default async function handler(req, res) {
 
     const db = getDb();
 
+    // GET - filter and page teams in a unit
     if(req.method === 'GET') {
-        // Get teams
+        const unit = req.query.unit;
+        if(typeof unit !== 'string' || !/^[1-9]\d*$/.test(unit) || !Number.isSafeInteger(Number(unit))) {
+            return res.status(400).json({error: 'A valid unit ID is required.'});
+        }
+        const {size = 'all', page = '1', pageSize = '25'} = req.body;
     }
 
+    // POST - add a team to a unit
     if(req.method === 'POST') {
-        const submitType = req.body.submit_type;
+        const unit = req.query.unit;
+        const unitCode = req.query.unitCode;
+        const {team_id, name} = req.body;
 
-        if(submitType === 'createTeam') {
-            // Code for adding team to DB here
-        }
-        if(submitType === 'editTeam') {
-            //Code for editing team details here
-        }
-        if(submitType === 'addGroup') {
-            //Code for adding group to team here
-        }
-        if(submitType === 'removeGroup') {
-            //Code for removing group from team here
+        // Validate required fields
+        if(!team_id || !name) {
+            return res.status(400).json({error: 'Team ID and Team Name are required.'});
         }
 
+        // Check unit exists
+        const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
+        if(!unitCheck.length) {
+            return res.status(404).json({error: 'Unit not found.'});
+        }
+
+        // Attempt to add team to unit - team id must be unique, so an error will be returned if it clashes
+        await db.query(
+            `INSERT INTO teams (team_id, name, unit_id, created_by) VALUES (?, ?, ?, ?)`,
+            [team_id, name, unit, admin.studentId]
+        );
+        //NEED ERROR HANDLING HERE FOR DUPLICATE TEAM_IDS
+
+        return res.status(200).json({ok: true});
     }
 
     if(req.method === 'DELETE') {
