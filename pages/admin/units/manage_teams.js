@@ -23,8 +23,6 @@ export default function ManageTeamsPage() {
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [selectedUnitId, setSelectedUnitId] = useState(null);
     const [teams, setTeams] = useState([]);
-    const [selectedTeam, setSelectedTeam] = useState(null);
-    const [groups, setGroups] = useState([]);
     
     const [teamFilters, setTeamFilters] = useState(DEFAULT_TEAM_FILTERS);
     const [pagination, setPagination] = useState(null);
@@ -33,7 +31,6 @@ export default function ManageTeamsPage() {
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
     const [loadingTeams, setLoadingTeams] = useState(false);
-    const [loadingGroups, setLoadingGroups] = useState(false);
     
     const teamsRequestRef = useRef(false);
     const addGroupRequestRef = useRef(null);
@@ -67,7 +64,7 @@ export default function ManageTeamsPage() {
             try {
                 savedUnitId = sessionStorage.getItem(SELECTED_UNIT_KEY);
             } catch {
-                // Loading groups must still work when browser storage is unavailable
+                // Loading teams must still work when browser storage is unavailable
             }
             
         } catch {
@@ -102,7 +99,17 @@ export default function ManageTeamsPage() {
         router.push('/');
     }
 
-
+    /**
+     * @function getTeams
+     * @async
+     * 
+     * @param {*} unitId 
+     * @param {*} unitCode 
+     * @param {*} notify 
+     * @param {*} nextFilters 
+     * @param {*} keepExpanded 
+     * @returns 
+     */
     async function getTeams(unitId, unitCode, notify = true, nextFilters = DEFAULT_TEAM_FILTERS, keepExpanded = false) {
         // Keep an older list response from overwriting completed team operations (adding group, removing group).
         console.log('getTeams triggered');
@@ -146,6 +153,15 @@ export default function ManageTeamsPage() {
         }
     }
 
+    /**
+     * @function deleteTeam
+     * @async
+     * 
+     * @param {*} teamId 
+     * @param {*} teamName 
+     * @param {*} unitId 
+     * @returns 
+     */
     async function deleteTeam(teamId, teamName, unitId) {
         if(!confirm(`Delete team ${teamName}? This cannot be undone.`)) {
             return;
@@ -289,7 +305,7 @@ export default function ManageTeamsPage() {
                                                 <td>{e.current_size}</td>
                                                 <td>
                                                     <Link
-                                                        href={`/admin/units/${selectedUnitId}/teams/${e.team_id}/groups?name=${e.name}`}
+                                                        href={`/admin/units/${selectedUnitId}/teams/${e.team_id}/groups?name=${e.name}&unitCode=${selectedUnit}`}
                                                         className="abtn abtn-teal">
                                                         Add/Remove Groups
                                                     </Link>
