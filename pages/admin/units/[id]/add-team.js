@@ -25,16 +25,29 @@ export default function AddTeamPage() {
     const [error, setError] = useState('');
     const [toast, setToast] = useState(null);
 
+    /**
+     * @function handleChange
+     * @param {*} e 
+     */
     function handleChange(e) {
         const {name, value} = e.target;
         setForm(f => ({...f, [name]: value}));
     }
 
+    /**
+     * @function showToast
+     * @param {*} msg 
+     * @param {*} type 
+     */
     function showToast(msg, type = 'success') {
         setToast({msg, type});
         setTimeout(() => setToast(null), 4000);
     }
 
+    /**
+     * @function handleSubmit
+     * @param {*} e 
+     */
     async function handleSubmit(e) {
         e.preventDefault();
         setError('');
