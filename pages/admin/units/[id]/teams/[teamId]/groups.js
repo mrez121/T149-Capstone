@@ -143,7 +143,7 @@ export default function TeamGroupsPage() {
             });
             const data = await res.json();
             if(res.ok) {
-                showToast('Groups added to team successfully.');
+                showToast('Team saved successfully.');
             } else {
                 setError(data.error || 'Failed to update team. Please try again.');
             }
