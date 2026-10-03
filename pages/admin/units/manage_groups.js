@@ -203,6 +203,27 @@ export default function ManageGroupsPage() {
         }
     }
 
+    async function lockAllGroups(unitId, unitCode) {
+        if(!confirm(`Lock all groups in ${unitCode}? This cannot be undone.`)) {
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const res = await fetch(`/api/admin/units/lock_all_groups?unit=${unitId}&unitCode=${unitCode}`, {method: 'POST'});
+            const data = await res.json();
+            if(data.ok) {
+                setLoading(false);
+                showToast(`All groups in ${unitCode} locked.`);
+                await getGroups(selectedUnitId, selectedUnit, false, filters, true);
+            }
+        } catch {
+            setLoading(false);
+            showToast('Unable to lock groups. Please try again', 'error');
+        }
+    }
+
     /**
      * @function handleLogout
      * @async
@@ -313,6 +334,8 @@ export default function ManageGroupsPage() {
                                 onClick={() => getGroups(selectedUnitId, selectedUnit, false, {...DEFAULT_FILTERS, pageSize: filters.pageSize})}>Clear filters</button>
                             <button className='abtn abtn-ghost' disabled={loadingGroups || unlockingGroupId !== null}
                                 onClick={() => getGroups(selectedUnitId, selectedUnit, false, filters)}>Refresh groups</button>
+                            <button className='abtn abtn-red' disabled={loadingGroups || unlockingGroupId !== null}
+                                onClick={() => lockAllGroups(selectedUnitId, selectedUnit)}>Lock all groups</button>
                         </div>
                     )}
 
