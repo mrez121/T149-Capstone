@@ -45,6 +45,7 @@ export default async function handler(req, res) {
         uc.min_size, uc.max_size, uc.max_new,
         (SELECT COUNT(*) FROM unit_enrolments WHERE unit_id = u.id) AS student_count,
         (SELECT COUNT(*) FROM \`groups\` WHERE unit_id = u.id) AS group_count,
+        (SELECT COUNT(*) FROM \`groups\` WHERE unit_id = u.id AND \`groups\`.status = 'locked') AS locked_count,
         (SELECT COUNT(*) FROM teams WHERE unit_id = u.id) AS team_count
       FROM units u
       LEFT JOIN unit_constraints uc ON uc.unit_id = u.id

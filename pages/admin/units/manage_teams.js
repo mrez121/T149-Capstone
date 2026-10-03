@@ -9,7 +9,6 @@ import AdminToast from "../../../components/AdminToast";
 
 const SELECTED_UNIT_KEY = 'teamup.admin.manageGroups.unitId';
 const DEFAULT_TEAM_FILTERS = {size: 'all', page: 1, pageSize: 25};
-const DEFUALT_GROUP_FILTERS = {status: 'locked', size: 'all', page: 1, pageSize: 25};
 
 /**
  * @function ManageTeamsPage
@@ -231,7 +230,7 @@ export default function ManageTeamsPage() {
                                     <div className="aunit-semester">{u.semester}</div>
                                     <div className="aunit-stats">
                                         <span>📁 {u.team_count || 0} teams</span>
-                                        <span>📁 {u.group_count || 0} groups</span>
+                                        <span>📁 {u.locked_count || 0} locked groups</span>
                                     </div>
                                     <div className="aunit-actions">
                                         <button className="abtn abtn-blue" disabled={loadingTeams} onClick={() => getTeams(u.id, u.unit_code)}>{u.unit_code} Teams</button>
