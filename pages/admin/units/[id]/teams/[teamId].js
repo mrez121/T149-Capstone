@@ -126,7 +126,7 @@ export default function EditTeamPage() {
                         <button className="abtn abtn-blue" type="submit" disabled={saving}>
                             {saving ? 'Saving details...' : 'Save changes'}
                         </button>
-                        <Link href='/admin/units/manage-teams' className="abtn abtn-ghost">Cancel</Link>
+                        <Link href='/admin/units/manage_teams' className="abtn abtn-ghost">Cancel</Link>
                     </div>
                 </form>
             </div>
