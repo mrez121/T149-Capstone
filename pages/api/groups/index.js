@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * @function handler
  * @async
- * This function handles the HTTP requests group related queries and functions
+ * This function handles the HTTP requests for group related queries and functions
  * GET  - list public groups
  * POST - create a public or private group
  * @param {*} req the HTTP request used to determine functionality
