@@ -71,11 +71,10 @@ export default function LoginPage() {
           </form>
           <div className="hint">
             <strong>Demo accounts</strong> — password: <strong>password123</strong><br />
-            n10000001 · n10000002 · n10000003 · n10000004 · n10000005<br />
-            n10000006 · n10000007 · n10000008 · n10000009 · n10000010<br />
-            Admins: bfarnsworth · wlu · mrezwani · hwang
+            Admins: bfarnsworth · wlu · mrezwani · hwang<br />
+            n10000001 - n10000260<br />
+            n10000001 - n10000010 are not enrolled after initial setup.  
           </div>
-          <p className="sso">🔒 QUT SSO integration planned for Phase 2</p>
         </div>
         <style jsx>{`
           
