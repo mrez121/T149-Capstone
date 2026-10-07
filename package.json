@@ -1,14 +1,12 @@
 {
   "name": "TeamUp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "TeamUp — Constraint-Based Student Team Formation System",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "node lib/seed.js",
-    "setup": "node setup.js",
-    "lrgDataSeed": "node --env-file=.env.local lib/large_data_seed.js",
+    "setup": "node lib/large_data_seed.js",
     "test:directory": "node --experimental-vm-modules --test testing/automated/student-directory.test.cjs"
   },
   "dependencies": {
