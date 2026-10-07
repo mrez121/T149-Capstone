@@ -38,6 +38,11 @@ export default function ManageTeamsPage() {
 
     useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
+    /**
+     * @function loadUnits
+     * @async
+     * Load all units from the database into the manage_teams page
+     */
     async function loadUnits() {
         try {
             const res = await fetch('/api/admin/units');
@@ -79,8 +84,8 @@ export default function ManageTeamsPage() {
     /**
      * @function showToast
      * Show a notification for four seconds, replacing the previous notification timer.
-     * @param {*} msg 
-     * @param {*} type 
+     * @param {*} msg - the message to be displayed
+     * @param {*} type - the type of message
      */
     function showToast(msg, type = 'success') {
         clearTimeout(toastTimerRef.current);
@@ -101,15 +106,13 @@ export default function ManageTeamsPage() {
     /**
      * @function getTeams
      * @async
-     * 
-     * @param {*} unitId 
-     * @param {*} unitCode 
-     * @param {*} notify 
-     * @param {*} nextFilters 
-     * @param {*} keepExpanded 
-     * @returns 
+     * Get all teams in a specified unit in accordance with user provided filters
+     * @param {*} unitId - the id of the unit to fetch teams for
+     * @param {*} unitCode - the code/name of the unit to fetch teams for
+     * @param {*} notify - whether to show a successful manual query notification
+     * @param {*} nextFilters - filters and page to request; new courses use the defaults
      */
-    async function getTeams(unitId, unitCode, notify = true, nextFilters = DEFAULT_TEAM_FILTERS, keepExpanded = false) {
+    async function getTeams(unitId, unitCode, notify = true, nextFilters = DEFAULT_TEAM_FILTERS) {
         // Keep an older list response from overwriting completed team operations (adding group, removing group).
         console.log('getTeams triggered');
         if(teamsRequestRef.current || addGroupRequestRef.current !== null || removeGroupRequestRef.current !== null) {
@@ -155,11 +158,10 @@ export default function ManageTeamsPage() {
     /**
      * @function deleteTeam
      * @async
-     * 
-     * @param {*} teamId 
-     * @param {*} teamName 
-     * @param {*} unitId 
-     * @returns 
+     * delete a team from the specified unit
+     * @param {*} teamId - id of the team to be deleted
+     * @param {*} teamName - name of the team to be deleted
+     * @param {*} unitId - id of the unit the team is in
      */
     async function deleteTeam(teamId, teamName, unitId) {
         if(!confirm(`Delete team ${teamName}? This cannot be undone.`)) {
@@ -302,7 +304,7 @@ export default function ManageTeamsPage() {
                                                     <div className="adata-id">{e.team_id}</div>
                                                 </th>
                                                 <td>{e.current_size}</td>
-                                                <td>
+                                                <td className="aunit-actions">
                                                     <Link
                                                         href={`/admin/units/${selectedUnitId}/teams/${e.team_id}/groups?name=${e.name}&unitCode=${selectedUnit}`}
                                                         className="abtn abtn-teal">

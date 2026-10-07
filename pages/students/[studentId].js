@@ -9,14 +9,6 @@ import Head from 'next/head';
  * @returns Student Profile HTML (if loading state = false & no errors) || Loading HTML (if loading state = true) || Error html (if errors or no profile)
  */
 export default function StudentProfile() {
-  /**
-   * @const router
-   * @const studentId
-   * @const currentStudent
-   * @const profile
-   * @const loading
-   * @const error
-   */
   const router = useRouter();
   const { studentId } = router.query;
 
@@ -87,7 +79,6 @@ export default function StudentProfile() {
     router.push('/');
   }
 
-  // Converts database values such as "forming" into readable labels.
   /**
    * @function formatLabel
    * Converts database values such as "forming" into readable labels
@@ -100,6 +91,12 @@ export default function StudentProfile() {
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
+  /**
+   * @function formatRemoteStatus
+   * Converts database value for remote student into a readable label
+   * @param {*} value - database integer value
+   * @returns Foratted string value
+   */
   function formatRemoteStatus(value) {
     if(value === 0) {
       return "On campus";

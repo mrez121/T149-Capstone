@@ -203,8 +203,16 @@ export default function ManageGroupsPage() {
         }
     }
 
+    /**
+     * @function lockAllGroups
+     * @async
+     * Lock all groups in a unit and put any students not in a group into their own group to be locked.
+     * @param {*} unitId - the unit id of the unit to be locked
+     * @param {*} unitCode - the unit code of the unit being locked
+     */
     async function lockAllGroups(unitId, unitCode) {
-        if(!confirm(`Lock all groups in ${unitCode}? This cannot be undone.`)) {
+        if(!confirm(`Lock all groups in ${unitCode}? Any groups will need to be unlocked manually.
+            Any students not in a group will be placed in a group on their own and that group will be locked.`)) {
             return;
         }
 

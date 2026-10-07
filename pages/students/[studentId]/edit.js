@@ -12,9 +12,6 @@ import Link from 'next/link';
  * @returns Edit Profile Page html || loading html (if loading = true) || error page html (if error with fetching or updating profile information)
  */
 export default function EditProfilePage() {
-    /**
-     * Constatnts related to page data and states
-     */
     const router = useRouter();
     const {studentId} = router.query;
 
@@ -419,7 +416,7 @@ export default function EditProfilePage() {
                 <form onSubmit={handleAvailabilitySubmit} className='card'>
                     {error && <div className='aerror-box'>{error}</div>}
 
-                    <ul>
+                    <ul className='team-group-list'>
                         {unitSlots.timeslots.map((item) => {
                             const selectedSlot = studentSlots.includes(item.slot);
                             if(selectedSlot) {

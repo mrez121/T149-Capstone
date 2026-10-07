@@ -6,6 +6,11 @@ import { useRouter }           from 'next/router';
 import Head                    from 'next/head';
 import Link                    from 'next/link';
 
+/**
+ * @function ExportCsvPage
+ * Builds the ExportCsvPage using React.js
+ * @returns Export CSV Page HTML
+ */
 export default function ExportCsvPage() {
   const router = useRouter();
   const [units,    setUnits]    = useState([]);
@@ -24,6 +29,12 @@ export default function ExportCsvPage() {
   }, []);
 
   // Trigger CSV download for selected unit
+  /**
+   * @function handleExport
+   * @async
+   * Trigger the CSV download for the selected unit
+   * @param {*} e a react event
+   */
   async function handleExport(e) {
     e.preventDefault();
     if (!unitCode) { setError('Please select a unit.'); return; }

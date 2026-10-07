@@ -4,6 +4,14 @@
 import { getDb }       from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 
+/**
+ * @function handler
+ * @async
+ * Handler function for fetching data to be exported to a CSV file
+ * @param {*} req - a html request
+ * @param {*} res - a html response
+ * @returns a html response code and a csv file that can be downloaded by the user.
+ */
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed.' });
 

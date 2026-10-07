@@ -8,6 +8,11 @@ import Head from "next/head";
 import Link from "next/link";
 import AdminToast from "../../../../../components/AdminToast";
 
+/**
+ * @function EditTeamPage
+ * Build the Edit Team Page in React.js
+ * @returns Edit Team Page HTML (if loading = false) || Loading HTML (if loading = true)
+ */
 export default function EditTeamPage() {
     const router = useRouter();
     const {id, teamId} = router.query;
@@ -44,18 +49,31 @@ export default function EditTeamPage() {
 
     /**
      * @function handleChange
-     * @param {*} e 
+     * handle form changes on page
+     * @param {*} e - react event
      */
     function handleChange(e) {
         const {name, value} = e.target;
         setForm(f => ({...f, [name]: value}));
     }
 
+    /**
+     * @function showToast
+     * Show a temporary notification
+     * @param {*} msg - the message to be displayed
+     * @param {*} type - the type of message to be displayed
+     */
     function showToast(msg, type = 'success') {
         setToast({msg, type});
         setTimeout(() => setToast(null), 4000);
     }
 
+    /**
+     * @function handleSubmit
+     * @async
+     * Submit the edit team form to the teams api
+     * @param {*} e - react event
+     */
     async function handleSubmit(e) {
         e.preventDefault();
         setError('');

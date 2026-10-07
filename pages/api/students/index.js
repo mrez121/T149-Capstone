@@ -8,11 +8,14 @@ const SORTS = {
 };
 
 /**
+ * @function handler
+ * @async
  * Read public directory fields within the authenticated student's first unit.
  * Supplying page/pageSize enables server pagination; the parameterless response
  * stays compatible with the existing Student Profile page.
  * @param {import('next').NextApiRequest} req
  * @param {import('next').NextApiResponse} res
+ * @returns a html response code and a json object
  */
 export default async function handler(req, res) {
   if (req.method !== 'GET') {

@@ -13,7 +13,11 @@ const INITIAL_FILTERS = {
   q: '', status: 'all', experience: 'all', cohort: '', slot: '', sort: 'name-asc', page: 1, pageSize: 25,
 };
 
-/** Displays a server-paginated directory and keeps invitation actions tied to the current group. */
+/**
+ * @function StudentDirectory
+ * Displays a server-paginated directory and keeps invitation actions tied to the current group.
+ * @returns Student Directory HTML
+ */
 export default function StudentDirectory() {
   const router = useRouter();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
@@ -94,22 +98,42 @@ export default function StudentDirectory() {
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
 
-  /** Reset the page whenever a filter or page size changes, so results cannot appear falsely empty. */
+  /**
+   * @function changeFilter
+   * Reset the page whenever a filter or page size changes, so results cannot appear falsely empty
+   * @param {*} key - the filter key
+   * @param {*} value - the filter value
+   */
   function changeFilter(key, value) {
     setFilters((current) => ({ ...current, [key]: value, page: 1 }));
   }
 
+  /**
+   * @function clearFilters
+   * Reset the filters on the page to their default values.
+   */
   function clearFilters() {
     setSearch('');
     setFilters((current) => ({ ...INITIAL_FILTERS, pageSize: current.pageSize, sort: current.sort }));
   }
 
+  /**
+   * @function showToast
+   * Show a temporary notification
+   * @param {*} message - the message to be displayed
+   * @param {*} type - the type of message to be displayed
+   */
   function showToast(message, type = 'success') {
     clearTimeout(toastTimer.current);
     setToast({ message, type });
     toastTimer.current = setTimeout(() => setToast(null), 4500);
   }
 
+  /**
+   * @function handleLogout
+   * @async
+   * Sign the user out of TeamUp and return them to the login page
+   */
   async function handleLogout() {
     try {
       const response = await fetch('/api/auth/logout', { method: 'POST' });
@@ -124,7 +148,13 @@ export default function StudentDirectory() {
   const isCreator = Boolean(myGroup && student &&
     myGroup.created_by === student.studentId && myGroup.status === 'forming');
 
-  /** Preserve the existing invite API and prevent duplicate submissions while a request is pending. */
+  /**
+   * @function handleInvite
+   * @async
+   * Send a group invite to the target student.
+   * Preserve the existing invite API and prevent duplicate submissions while a request is pending.
+   * @param {*} targetTeamUpId - the TeamUp ID of the student being invited.
+   */
   async function handleInvite(targetTeamUpId) {
     if (!isCreator || inviteLock.current) return;
     inviteLock.current = true;
@@ -155,6 +185,11 @@ export default function StudentDirectory() {
   const start = pagination.total ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
   const end = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
+  /**
+   * @function goToPage
+   * Go to the specified page in the results list for the student directory.
+   * @param {*} page - the page to go to.
+   */
   function goToPage(page) {
     if (busy || error) return;
     setFilters((current) => ({ ...current, page: Math.max(1, Math.min(page, pagination.totalPages)) }));

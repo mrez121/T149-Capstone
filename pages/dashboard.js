@@ -115,7 +115,11 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 4500);
   }
 
-  /** Copy the current student's TeamUp ID so it can be shared for invitations. */
+  /**
+   * @function handleCopyTeamUpId
+   * @async
+   * Copy the current student's TeamUp ID so it can be shared for invitations.
+   */
   async function handleCopyTeamUpId() {
     if (!student?.teamupId) return;
 
@@ -261,7 +265,6 @@ export default function Dashboard() {
     }
   }
 
-  // Accept or decline an invitation shown in the pending invite banner.
   /**
    * @function handleRespondInvite
    * @async

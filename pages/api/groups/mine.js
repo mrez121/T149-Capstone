@@ -12,28 +12,19 @@ import { requireAuth } from '../../../lib/session';
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-  /**
-   * @const student
-   * @const db
-   * @const grpRows
-   * @var members
-   * @const memberRows
-   * @const slotRows
-   * @const inviteRows
-   */
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed.' });
-
+  // Authentication check
   const student = requireAuth(req, res);
   if (!student) return;
 
   const db = getDb();
-
+  // Find the correct group
   const [grpRows] = await db.query(`
     SELECT g.* FROM \`groups\` g
     JOIN group_members gm ON g.group_id = gm.group_id
     WHERE gm.student_id = ?
   `, [student.studentId]);
-
+  // Find other group members
   let members = [];
   if (grpRows.length > 0) {
     const [memberRows] = await db.query(`
@@ -44,14 +35,14 @@ export default async function handler(req, res) {
     `, [grpRows[0].group_id]);
     members = memberRows;
   }
-
+  // Find the unit constraints for the group
   const [unit] = await db.query(`
     SELECT unit_id FROM unit_enrolments WHERE student_id = ?`, student.studentId
   );
   const [unitConstraints] = await db.query(`
     SELECT * FROM unit_constraints WHERE unit_id = ?`, unit[0].unit_id
   );
-
+  // Find the availability of the student
   const [slotRows] = await db.query(
     'SELECT slot FROM availability WHERE student_id = ? ORDER BY slot',
     [student.studentId]

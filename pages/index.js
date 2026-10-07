@@ -9,13 +9,7 @@ import Head          from 'next/head';
  * @returns Login page HTML
  */
 export default function LoginPage() {
-  /**
-   * @const router
-   * @const studentId
-   * @const password
-   * @const error
-   * @const loading
-   */
+
   const router = useRouter();
   const [studentId, setStudentId] = useState('');
   const [password,  setPassword]  = useState('');

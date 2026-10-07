@@ -6,6 +6,11 @@ import { useRouter }           from 'next/router';
 import Head                    from 'next/head';
 import Link                    from 'next/link';
 
+/**
+ * @function CsvUploadPage
+ * Builds the CSV upload page using React.js
+ * @returns CSV Upload Page HTML
+ */
 export default function CsvUploadPage() {
   const router = useRouter();
 
@@ -28,7 +33,12 @@ export default function CsvUploadPage() {
       });
   }, []);
 
-  // Read the CSV file and store its text content
+  
+  /**
+   * @function handleFileChange
+   * Reads the CSV file and stores its text content
+   * @param {*} e - a react event
+   */
   function handleFileChange(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -41,7 +51,12 @@ export default function CsvUploadPage() {
     reader.readAsText(file);
   }
 
-  // Submit the CSV to the API for bulk enrolment
+  /**
+   * @function handleSubmit
+   * @async
+   * Submit the CSV file to the API for bulk enrolment into a unit
+   * @param {*} e - a react event 
+   */
   async function handleSubmit(e) {
     e.preventDefault();
     if (!csvText) { setError('Please select a CSV file.'); return; }

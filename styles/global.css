@@ -372,6 +372,13 @@ nav {
   gap: 8px;
 }
 
+.team-group-list {
+  justify-content: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px; 
+}
+
 .slot {
   padding: 6px 11px;
   color: var(--teal);
