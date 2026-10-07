@@ -47,7 +47,7 @@ IFB399 Capstone · QUT Technology For Teaching · Team 149
 ## Demo login accounts
 **Password for all accounts: password123**<br>
 
-Administrator users:
+Administrator users:<br>
 bfarnsworth<br>
 hwang<br>
 mrezwani<br>
@@ -96,13 +96,13 @@ When Alice is invited to a group, an email is sent to <teamup.student1@gmail.com
 You can use the following details to access the account and view the invite notifications yourself:<br>
 - https://mail.google.com
 - email address: teamup.student1@gmail.com
-- password: TeamStudent.1@!
+- password: TeamStudent.1@!<br>
 **Do not add a passkey or change any account details.**<br>
 
 TeamUp uses [Resend](https://resend.com/) for its email notification system.<br>
-If you would prefer to use another email address for testing the notification system, create a Resend account and replace<br>
-`RESEND_API_KEY` in .env.local<br>
-with your Resend account API key. Then change any student email addresses to ones that your API key can send to in MySQL workbench using this command:<br>
+If you would prefer to use another email address for testing the notification system, create a Resend account and replace<br><br>
+`RESEND_API_KEY` in .env.local<br><br>
+with your Resend account API key. Then change any student email addresses to ones that your API key can send to in MySQL workbench using this command:<br><br>
 `UPDATE students SET email = '{your_resend_valid_email}' WHERE student_id = '{student number}';`
 
 ## Default constraints enforced
