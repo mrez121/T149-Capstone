@@ -1,4 +1,5 @@
 // pages/api/groups/mine.js
+import { findSharedSlots } from '../../../lib/constraints';
 import { getDb }       from '../../../lib/db';
 import { requireAuth } from '../../../lib/session';
 
@@ -34,6 +35,12 @@ export default async function handler(req, res) {
       WHERE gm.group_id = ?
     `, [grpRows[0].group_id]);
     members = memberRows;
+    // Revalidate group shared timeslot on load in case availability or unit timeslots change.
+    const shared = await findSharedSlots(members.map(m => m.student_id));
+    await db.query(
+      'UPDATE `groups` SET shared_slot = ? WHERE group_id = ?',
+      [shared.size > 0 ? [...shared].sort()[0] : null, grpRows[0].group_id]
+    );
   }
   // Find the unit constraints for the group
   const [unit] = await db.query(`
