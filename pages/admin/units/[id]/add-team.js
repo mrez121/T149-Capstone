@@ -8,6 +8,11 @@ import Head from "next/head";
 import Link from "next/link";
 import AdminToast from "../../../../components/AdminToast";
 
+/**
+ * @function AddTeamPage
+ * Build the Add Team Page using React.js
+ * @returns Add Team Page HTML (if loading = false) || Loading HTML (if loading = true)
+ */
 export default function AddTeamPage() {
 
     const router = useRouter();
@@ -27,7 +32,8 @@ export default function AddTeamPage() {
 
     /**
      * @function handleChange
-     * @param {*} e 
+     * Update user input in forms
+     * @param {*} e - react event
      */
     function handleChange(e) {
         const {name, value} = e.target;
@@ -36,8 +42,9 @@ export default function AddTeamPage() {
 
     /**
      * @function showToast
-     * @param {*} msg 
-     * @param {*} type 
+     * Show a temporary notification message
+     * @param {*} msg - the message to be displayed
+     * @param {*} type - the type of message to be displayed
      */
     function showToast(msg, type = 'success') {
         setToast({msg, type});
@@ -46,7 +53,9 @@ export default function AddTeamPage() {
 
     /**
      * @function handleSubmit
-     * @param {*} e 
+     * @async
+     * submit the form to the teams API
+     * @param {*} e - react event
      */
     async function handleSubmit(e) {
         e.preventDefault();

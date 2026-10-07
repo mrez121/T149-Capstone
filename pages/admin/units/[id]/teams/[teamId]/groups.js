@@ -10,8 +10,8 @@ import AdminToast from "../../../../../../components/AdminToast";
 
 /**
  * @function TeamGroupsPage
- * 
- * @returns
+ * Builds the Team Groups Page in React.js
+ * @returns Team Groups Page HTML (if loading = false) || Loading HTML (if loading = true)
  */
 export default function TeamGroupsPage() {
     const router = useRouter();
@@ -38,6 +38,11 @@ export default function TeamGroupsPage() {
 
     useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
+    /**
+     * @function loadGroupAndUnitData
+     * @async
+     * Fetches group information and unit constraints from the database for use in validating team construction
+     */
     async function loadGroupAndUnitData() {
         try {
             const res = await fetch(`/api/admin/units/teams_groups?unit=${id}&teamId=${teamId}`, {method: 'GET'});
@@ -81,9 +86,9 @@ export default function TeamGroupsPage() {
 
     /**
      * @function showToast
-     * 
-     * @param {*} msg 
-     * @param {*} type 
+     * Shows a temporary notification message
+     * @param {*} msg - the message to be displayed
+     * @param {*} type - the type of message to be displayed
      */
     function showToast(msg, type = 'success') {
         clearTimeout(toastTimerRef.current);
@@ -93,14 +98,21 @@ export default function TeamGroupsPage() {
 
     /**
      * @function handleLogout
-     * 
+     * Log the user out of TeamUp
      */
     async function handleLogout() {
         await fetch('/api/auth/logout', {method: 'POST'});
         router.push('/');
     }
 
-
+    /**
+     * @function handleGroupSelect
+     * Checks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if the
+     * group has been added or removed from the team.
+     * @param {*} groupId - the id of the group selected.
+     * @param {*} memberCount - how many students are in the selected group
+     * @param {*} newCount - how many new students are in the selected group
+     */
     function handleGroupSelect(groupId, memberCount, newCount) {
         const selectCheck = teamGroups.includes(groupId);
 
@@ -116,16 +128,24 @@ export default function TeamGroupsPage() {
         }
     }
 
+    /**
+     * @function saveTeamGroups
+     * @async
+     * Save the list of selected groups to the team.
+     * @param {*} e - react event
+     */
     async function saveTeamGroups(e) {
         e.preventDefault();
         setError('');
         setSaving(true);
 
+        // Check if team size is greater than the max team size for the unit
         if(teamSize > maxSize) {
             setError('Error: Team size is greater than maximum team size allowed for unit.');
             setSaving(false);
             return;
         }
+        // Check if the team's new student count is greater than the allowed size for the unit.
         if(teamNewCount > maxNew) {
             setError('Error: Team has more new students than allowed for unit.');
             setSaving(false);
@@ -183,11 +203,22 @@ export default function TeamGroupsPage() {
 
                 <div className="acontainer">
                     <form onSubmit={saveTeamGroups} className="card">
-                        <label>Team size: {teamSize} / {minSize}-{maxSize}</label>
-                        <div></div>
-                        <label>Team new count: {teamNewCount} / {maxNew}</label>
+                        <div className={`formation-check ${
+                            teamSize >= minSize && teamSize <= maxSize ? 'complete' : 'attention'}`}
+                        >
+                            <span>Team size:</span> <strong>{teamSize} / {minSize}-{maxSize}</strong>                   
+                        </div>
+                        <br/>
+                        <div className={`formation-check ${
+                            teamNewCount <= maxNew ? 'complete' : 'attention'
+                        }`}>
+                            <span>Team new count:</span> <strong>{teamNewCount} / {maxNew}</strong>
+                        </div>
+                        <br/>
                         {error && <div className="aerror-box">{error}</div>}
-                        <ul>
+                        <h2>Groups</h2>
+                        <br/>
+                        <ul className="team-group-list">
                             {groups.map((item) => {
                                 const selectedGroup = teamGroups.includes(item.group_id);
                                 if(selectedGroup) {
@@ -199,7 +230,8 @@ export default function TeamGroupsPage() {
                                             value={item.group_id}
                                             onClick={() => handleGroupSelect(item.group_id, item.group_member_count, item.new_count)}
                                         >
-                                            {item.name}
+                                            {item.name} - {item.group_id}<br/>
+                                            {item.group_member_count} students
                                         </button>
                                     )
                                 }
@@ -212,12 +244,14 @@ export default function TeamGroupsPage() {
                                             value={item.group_id}
                                             onClick={() => handleGroupSelect(item.group_id, item.group_member_count, item.new_count)}
                                         >
-                                        {item.name}
+                                        {item.name} - {item.group_id}<br/>
+                                        {item.group_member_count} students
                                         </button>
                                     )
                                 }
                             })}
                         </ul>
+                        <br/>
                         <div className="abtn-row">
                             <button className="abtn abtn-blue" type="submit" disabled={saving}>
                                 {saving ? 'Saving...' : 'Save team'}
@@ -243,6 +277,7 @@ export default function TeamGroupsPage() {
                 .asection-header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:16px; }
                 .asection-title { margin:0 0 4px; font-size:18px; font-weight:650; color:#E6EDF3; }
                 .asection-sub { margin:0; font-size:13px; color:#8B949E; }
+                .aerror-box { background: rgba(248,81,73,.12); border: 1px solid rgba(248,81,73,.3); border-radius:8px; padding:12px 14px; font-size:14px; color:#F85149; margin-bottom:20px;}
                 .aempty { text-align:center; padding:64px 24px; color:#8B949E; }
                 .aempty-panel { background:#161B22; border:1px solid #30363D; border-radius:12px; }
                 .aempty-compact { padding:36px 24px; }

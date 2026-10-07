@@ -44,8 +44,8 @@ const unitCode = searchParams.get('unitCode');
     /**
      * @function showToast
      * Show a temporary notification message
-     * @param {*} msg 
-     * @param {*} type 
+     * @param {*} msg - the message to be displayed
+     * @param {*} type - the type of message to be displayed
      */
     function showToast(msg, type = 'success') {
         setToast({msg, type});

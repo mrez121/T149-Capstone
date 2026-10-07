@@ -419,7 +419,7 @@ export default function EditProfilePage() {
                 <form onSubmit={handleAvailabilitySubmit} className='card'>
                     {error && <div className='aerror-box'>{error}</div>}
 
-                    <ul>
+                    <ul className='team-group-list'>
                         {unitSlots.timeslots.map((item) => {
                             const selectedSlot = studentSlots.includes(item.slot);
                             if(selectedSlot) {
