@@ -12,14 +12,8 @@ import { requireAuth } from '../../../lib/session';
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-  /**
-   * @const student
-   * @const groupId
-   * @const db
-   * @const c
-   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
-
+  // Student authentication check
   const student = requireAuth(req, res);
   if (!student) return;
 

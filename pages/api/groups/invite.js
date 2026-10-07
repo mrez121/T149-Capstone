@@ -15,20 +15,6 @@ import { sendInviteEmail } from '../../../lib/email';
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-  /**
-   * @const student
-   * @const targetStudentId
-   * @const groupId
-   * @const db
-   * @const grpRows
-   * @const target
-   * @const targetRows
-   * @const targetInGroup
-   * @const ok
-   * @const errors
-   * @const existingInviteRows
-   * @const existingInvite
-   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
   const student = requireAuth(req, res);

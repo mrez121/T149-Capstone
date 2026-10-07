@@ -13,34 +13,26 @@ import { validateGroupReady }  from '../../../lib/constraints';
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-  /**
-   * @const student
-   * @const groupId
-   * @const db
-   * @const grpRows
-   * @const ok
-   * @const errors
-   * @const sharedSlots
-   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
-
+  // Authentication check
   const student = requireAuth(req, res);
   if (!student) return;
 
   const { groupId } = req.body;
   const db = getDb();
-
+  // Check that the group exists
   const [grpRows] = await db.query(
     'SELECT * FROM `groups` WHERE group_id = ?', [groupId]
   );
   if (!grpRows.length) return res.status(404).json({ error: 'Group not found.' });
+  // Check that the user requesting to lock the group is the group creator
   if (grpRows[0].created_by !== student.studentId) {
     return res.status(403).json({ error: 'Only the group creator can lock the group.' });
   }
-
+  // Validate the group against unit constraints using the validation engine
   const { ok, errors, sharedSlots } = await validateGroupReady(groupId);
   if (!ok) return res.status(400).json({ ok: false, errors });
-
+  // If group is validated against constraints, lock the group.
   await db.query(
     "UPDATE `groups` SET status = 'locked', shared_slot = ? WHERE group_id = ?",
     [sharedSlots.sort()[0], groupId]

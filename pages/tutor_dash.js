@@ -11,10 +11,7 @@ import AdminToast from '../components/AdminToast';
  * @returns Admin dashboard hhtml
  */
 export default function adminDashboard() {
-    /**
-     * @const router
-     * @const toast
-     */
+
     const router = useRouter();
     const [toast, setToast] = useState(null);
 

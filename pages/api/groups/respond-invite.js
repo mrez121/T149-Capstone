@@ -13,38 +13,26 @@ import { findSharedSlots, getGroupMembers, validateJoin } from '../../../lib/con
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-  /**
-   * @const student
-   * @const inviteId
-   * @const action
-   * @const db
-   * @const invRows
-   * @const groupId
-   * @const existing
-   * @const ok
-   * @const errors
-   * @const updatedMembers
-   * @const shared
-   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
-
+  // Student authentication
   const student = requireAuth(req, res);
   if (!student) return;
 
   const { inviteId, action } = req.body;
   const db = getDb();
-
+  // Find any pending invites for the student
   const [invRows] = await db.query(
     'SELECT * FROM invites WHERE id = ? AND to_student_id = ? AND status = "pending"',
     [inviteId, student.studentId]
   );
   if (!invRows.length) return res.status(404).json({ error: 'Invite not found.' });
-
+  // Decide how to handle the invite based on user action
+  // Decline updates the invite to declined status to remove it from the dashboard
   if (action === 'decline') {
     await db.query('UPDATE invites SET status = "declined" WHERE id = ?', [inviteId]);
     return res.status(200).json({ ok: true });
   }
-
+  // Accept adds the user to the group provided that their joining does not break group constraints.
   if (action === 'accept') {
     const groupId = invRows[0].group_id;
 
@@ -63,14 +51,14 @@ export default async function handler(req, res) {
       'INSERT INTO group_members (group_id, student_id) VALUES (?, ?)',
       [groupId, student.studentId]
     );
-
+    // Update shared timeslot for the group.
     const updatedMembers = await getGroupMembers(groupId);
     const shared = await findSharedSlots(updatedMembers.map(m => m.student_id));
     await db.query(
       'UPDATE `groups` SET shared_slot = ? WHERE group_id = ?',
       [shared.size > 0 ? [...shared].sort()[0] : null, groupId]
     );
-
+    // Update the invite status so it no longer appears on the dashboard.
     await db.query('UPDATE invites SET status = "accepted" WHERE id = ?', [inviteId]);
     return res.status(200).json({ ok: true });
   }

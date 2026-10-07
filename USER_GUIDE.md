@@ -11,7 +11,7 @@ assessment testing. Use the demo accounts and password listed in `README.md`.
 
 1. Sign in with a student number and open the Dashboard.
 2. The **Your TeamUp ID** panel near the top of the Dashboard displays the
-   student's invitation ID. TeamUp IDs use the format `TU-XXXXXX` and are the
+   student's invitation ID. TeamUp IDs use the format `TU-XXXXXXXX-X` and are the
    identifiers group creators enter when sending an invitation.
 3. Select **Copy ID** to copy the TeamUp ID, then share it with classmates who
    need to send an invitation. A TeamUp ID is different from a student number.
@@ -50,6 +50,10 @@ not enter a QUT student number in this field.
 Empty places are buttons, not inactive placeholders. Selecting one opens the
 Student Directory so the creator can look for a suitable classmate. Empty
 places are not displayed after the group is locked.
+
+Sending an invite will trigger an email notification to be sent to the
+invited user. The email tells the invited user who has invited them and
+which group they have been invited to.
 
 ## Administrator workflow
 
@@ -117,11 +121,39 @@ After upload, review the summary for successfully enrolled, already enrolled
 and unknown student numbers. Return to **Student Enrolments** and reload the
 selected unit's list to check the result.
 
-### Groups and exports
+### View and manage groups
+Use **View and manage groups** and select a unit to view the current groups in
+a unit. Locked groups can be unlocked by an administrator user at the request of
+students in a group.
 
-Use **Manage Groups** to select a unit, view group members and unlock a locked
-group when corrections are required. Use **Export CSV**, select a unit, then
-select **Download CSV** to download current unit, student and group data.
+All groups in a unit can be locked using the **Lock all groups** button. This is
+intended to be used after the deadline for group formation has passed and project
+allocation has to commence. Using **Lock all groups** will also place every student
+not in a group into a group on their own and then lock it, ensuring that every
+student enrolled in the unit can be allocated to a team in the TeamUp interface.
+
+### View and manage teams
+Use **View and manage teams** and select a unit to view the current teams created for a unit.
+Teams are created by the administrator for project assignment using the **Add team** button
+on this page. When a team is added, locked groups can then be assigned to a team by
+using the **Add/Remove Groups** button next to a team in the Team Results panel.
+
+Groups can be added to a team at any time and can be saved without meeting unit constraints.
+The **Add/Remove Groups** page tracks the size of the team and whether the team meets
+the unit's constraints automatically. It also prevents groups that are already allocated to
+another team from being shown or selected. After adding groups to a team, use the **Save team**
+button to write the team allocation to the database. Selecting a group does not automatically
+save the allocation.
+
+Team ID and Name details can be changed using the **Edit {team name}** button next to a team
+in the Team Results panel. A team can also be deleted using the **Delete {team name}** button
+in the same panel. Deleting a team frees any groups allocated to the deleted team, allowing
+the groups to be re-allocated to a different team.
+
+### Exports
+
+Use **Export CSV**, select a unit, then select **Download CSV** to download
+current unit, student and group data.
 
 The export includes student numbers, full names, emails, cohorts, new/returning
 status, group details, shared tutorial slots and constraint results. Names are
@@ -133,7 +165,10 @@ enrolment upload, copy only the student numbers into the format shown above.
 - Keep the repository in a normal local folder while running data setup. A
   OneDrive-synchronised project folder can lock or duplicate files during data
   seeding.
-- `npm run lrgDataSeed` resets the configured TeamUp database. Do not run it
+- The terminal running the server needs to be running in the background in order
+  to use the TeamUp web app. Additional error information for database specific
+  errors will appear in the terminal while running the development server.
+- `npm run setup` resets the configured TeamUp database. Do not run it
   against shared or valuable data without a backup and team agreement.
 - If a page reports that no unit or enrolment is available, confirm the account
   and unit assignment before treating it as a UI problem.
@@ -144,3 +179,13 @@ enrolment upload, copy only the student numbers into the format shown above.
   navigation accessible and the table can be scrolled on a narrow screen.
 - If CSV upload fails, check the unit's current enrolments and report the
   problem to the team. Use **Enrol student** for individual changes.
+- Email notifications for group invites are sent via the Resend API in this
+  version of TeamUp. Only 1 student account (*n10000001 - Alice Chen*) has
+  an test email that our Resend API key is valid for. Other students will
+  not receive an email notification in this version unless the Resend API key
+  in `.env.local` is replaced with a different key and student emails are updated
+  in the database accordingly.
+- TeamUp does not provide an interface for adding completely new students to the database.
+  The system is designed around basic student information being provided by QUT to
+  a unit co-ordinator, who can then enrol those students into their unit in TeamUp.
+

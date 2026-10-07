@@ -13,17 +13,6 @@ import { findSharedSlots, getGroupMembers, validateJoin } from '../../../lib/con
  * @returns a response status code and a json object
  */
 export default async function handler(req, res) {
-  /**
-   * @const student
-   * @const groupId
-   * @const db
-   * @const existing
-   * @const grpRows
-   * @const ok
-   * @const errors
-   * @const updatedMembers
-   * @const shared
-   */
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
   const student = requireAuth(req, res);
@@ -52,15 +41,16 @@ export default async function handler(req, res) {
   if (grpRows[0].type !== 'public') {
     return res.status(403).json({ error: 'Private groups are invite-only.' });
   }
-
+  // Confirm that the student joining the group won't break the group's constraints
   const { ok, errors } = await validateJoin(groupId, student.studentId);
   if (!ok) return res.status(400).json({ ok: false, errors });
 
+  // Add the student to the group
   await db.query(
     'INSERT INTO group_members (group_id, student_id) VALUES (?, ?)',
     [groupId, student.studentId]
   );
-
+  // Update the group's shared timeslot.
   const updatedMembers = await getGroupMembers(groupId);
   const shared = await findSharedSlots(updatedMembers.map(m => m.student_id));
   await db.query(

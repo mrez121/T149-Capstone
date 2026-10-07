@@ -5,6 +5,16 @@
 import { getDb } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/session";
 
+/**
+ * @function handler
+ * @async
+ * Handle API requests related to team information edits
+ * GET - Retrieve the team to be edited
+ * POST - Update team details
+ * @param {*} req - the HTML request 
+ * @param {*} res - the HTML response
+ * @returns a HTML response code and a json object
+ */
 export default async function handler(req, res) {
     const admin = requireAuth(req, res);
     if(!admin) {
@@ -31,7 +41,7 @@ export default async function handler(req, res) {
         return res.status(200).json({team: rows[0]});
     }
 
-    // POST - Edit team details or add groups to a team
+    // POST - Edit team details
     if(req.method === 'POST') {
         const submitType = req.body.submit_type;
         

@@ -18,20 +18,6 @@ import { requireAuth } from '../../../../lib/session';
 export default async function handler(req, res) {
 
   // Check user is logged in and is an admin
-  /**
-   * @const student
-   * @const db
-   * @const units
-   * @const unit_code
-   * @const unit_name
-   * @const semester
-   * @const min_size
-   * @const max_size
-   * @const max_new
-   * @const existing
-   * @const result
-   * @const unitId 
-   */
   const student = requireAuth(req, res);
   if (!student) return;
   if (!student.isAdmin) return res.status(403).json({ error: 'Admin access required.' });

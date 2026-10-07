@@ -6,7 +6,19 @@
 import { getDb } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/session";
 
+/**
+ * @function handler
+ * @async
+ * Handle requests related to team creation fetching basic team data
+ * GET - fetch all teams in a unit in accordance with filters and pagination rules
+ * POST - add a team to a unit
+ * DELETE - delete a team from a unit
+ * @param {*} req - the html request
+ * @param {*} res - the html response
+ * @returns a html status code and json object
+ */
 export default async function handler(req, res) {
+    // Admin authentication check
     const admin = requireAuth(req, res);
     if(!admin) {
         return;
@@ -20,9 +32,11 @@ export default async function handler(req, res) {
     // GET - filter and page teams in a unit
     if(req.method === 'GET') {
         const unit = req.query.unit;
+        // Validation check on provided unit id
         if(typeof unit !== 'string' || !/^[1-9]\d*$/.test(unit) || !Number.isSafeInteger(Number(unit))) {
             return res.status(400).json({error: 'A valid unit ID is required.'});
         }
+        // Fetch filters from request body, or set them to defaults.
         const {size = 'all', page = '1', pageSize = '25'} = req.body;
         if(['size', 'page', 'pageSize'].some(key => req.query[key] !== undefined && typeof req.query[key] !== 'string') ||
         !['all', '0', '1', '2', '3', '4', '5', '6+'].includes(size) || !/^[1-9]\d*$/.test(page) || !Number.isSafeInteger(Number(page)) ||
@@ -30,6 +44,7 @@ export default async function handler(req, res) {
             return res.status(400).json({error: 'Invalid team filters or pagination.'});
         }
 
+        // Build MySQL search conditions dynamically using the provided filters
         res.setHeader('Cache-Control', 'private, no-store');
         try {
             const conditions = ['teams.unit_id = ?'];
@@ -48,6 +63,7 @@ export default async function handler(req, res) {
                 [...params, pagination.pageSize, (pagination.page - 1) * pagination.pageSize]
             );
             
+            // Set results into a formatted object for use on the page
             const teamsById = new Map();
             for(const row of rows) {
                 if(!teamsById.has(row.team_id)) {
@@ -104,6 +120,7 @@ export default async function handler(req, res) {
         const name = req.query.name;
         const unit = req.query.unit;
 
+        // Check that the team exists
         const [teamCheck] = await db.query(`SELECT * FROM teams WHERE team_id = ? AND name = ? AND unit_id = ?`,
             [team_id, name, unit]
         );

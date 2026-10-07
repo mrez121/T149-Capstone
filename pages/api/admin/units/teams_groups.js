@@ -5,7 +5,18 @@
 import { getDb } from "../../../../lib/db";
 import { requireAuth } from "../../../../lib/session";
 
+/**
+ * @function handler
+ * @async
+ * Handler function for managing requests related team groups.
+ * GET - Retrieve locked groups in a unit for team assignment
+ * PUT - Update the groups allocated to a team.
+ * @param {*} req - the HTML request
+ * @param {*} res - the HTML response
+ * @returns a HTML status code and a json object
+ */
 export default async function handler(req, res) {
+    // Admin authentication check
     const admin = requireAuth(req, res);
     if(!admin) {
         return;
