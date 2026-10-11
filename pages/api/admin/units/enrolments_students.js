@@ -165,6 +165,11 @@ export default async function handler(req, res) {
                     );
                 }
             }
+            else {
+                await db.query(
+                    `DELETE FROM group_members WHERE group_id = ? AND student_id = ?`, [groupDetail[0].group_id, student_id]
+                );
+            }
         }
 
         // Delete student from unit_enrolments table
