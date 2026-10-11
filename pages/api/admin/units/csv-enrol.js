@@ -47,7 +47,7 @@ export default async function handler(req, res) {
   if (!unitRows.length) {
     return res.status(404).json({ error: `Unit ${unitCode} not found.` });
   }
-  const unitId = unitRows[0].unit_code;
+  const unitId = unitRows[0].id;
 
   // Parse CSV — one student_id per line, skip header and empty lines
   const lines = csvText

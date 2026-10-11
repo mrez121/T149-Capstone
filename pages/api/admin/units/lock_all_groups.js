@@ -47,7 +47,7 @@ export default async function handler(req, res) {
 
         // If there are students not in a group, add them to a group on their own.
         if(studentsNotInGroup) {
-            const [groupCount] = await db.query('SELECT COUNT(*) as c FROM \`groups\`', [unit]);
+            const [groupCount] = await db.query('SELECT COUNT(*) as c FROM \`groups\` WHERE unit_id = ?', [unit]);
             let counter = groupCount[0].c + 1;
 
             for(const student of studentsNotInGroup) {

@@ -94,7 +94,6 @@ export default async function handler(req, res) {
                 let [groupCheck] = await db.query(
                     `SELECT * FROM team_groups WHERE group_id = ?`, group
                 );
-                console.log(groupCheck);
                 if(groupCheck.length) {
                     return res.status(403).json({error: `Group ${group} is already allocated to a team.`});
                 }
