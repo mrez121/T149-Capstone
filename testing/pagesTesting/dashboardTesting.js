@@ -25,6 +25,28 @@
  * GET /dashboard 200 in 189ms (next.js: 174ms, application-code: 15ms)
  * Student information, tutorial slots, constraint status and the ungrouped view were displayed correctly.
  * The Student Directory button opened the correct page, and no loading, display or undefined-data errors occurred.
+ * 
+ * FUNCTIONAL (black box) TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 10/11/26 10:59
+ * Test results: PASS
+ *  GET /api/groups 200 in 54ms (next.js: 43ms, application-code: 11ms)
+    GET /api/groups/mine 200 in 65ms (next.js: 15ms, application-code: 50ms)
+    GET /api/groups 304 in 6ms (next.js: 1.3ms, application-code: 5ms)
+    GET /api/groups/mine 304 in 10ms (next.js: 2ms, application-code: 8ms)
+    Student information, tutorial slts, constraint status, and grouped view all displayed correctly
+    "TU-019B264C-6" was copied using the `Copy ID` button correctly.
+    `Student directory` button opens student directoty page correctly
+    `Edit Availability and Profile` button opens the edit profile page correctly
+    Clicking an empty group slot opens the student directory page correctly 
+    `Browse students` button opens student directory page correctly
+    `Leave group` button opens leave group prompt correctly
+    `Lock group` button locks group correctly
+    Locked group status displays correctly on dashboard when a group is locked.
+
+    Ungrouped dashboard displays correctly with group creation tools and blank constraint status
+    `Create group` button with a public group type selected creates a public group
+    `Create group` button with a private group type selected create a private group
  */
 
 /**
@@ -51,6 +73,22 @@
  * The student information, tutorial slots, group data and public group data were loaded correctly.
  * When the user was not logged in, opening the Dashboard redirected the user to the login page.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL (black box) TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 11:16
+ * Test results: PASS
+ *  GET /api/groups 200 in 9ms (next.js: 3ms, application-code: 6ms)
+    GET /api/groups/mine 200 in 10ms (next.js: 4ms, application-code: 6ms)
+    GET /api/groups 304 in 8ms (next.js: 1.8ms, application-code: 7ms)
+    GET /api/groups/mine 304 in 9ms (next.js: 3ms, application-code: 6ms)
+    All student information loaded correctly.
+
+    GET /dashboard 304 in 23ms (next.js: 9ms, application-code: 14ms)
+    GET /api/groups 401 in 8ms (next.js: 5ms, application-code: 4ms)
+    GET /api/groups/mine 401 in 12ms (next.js: 8ms, application-code: 4ms)
+    401 response and redirect to login page when the user is not logged in and dashboard accessed.
+
  */
 
 /**
@@ -76,6 +114,16 @@
  * The message was "Group 1 created."
  * The toast disappeared automatically after approximately 4.5 seconds.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and Time: 11/10/26 11:19
+ * Test results: PASS
+ * Success toast was displayed after creating a group.
+ * `Group 3 created` was the message
+ * `You have left the group` was displayed after leaving the group
+ * Both toasts disappeared automatically after approximately 4 seconds
+ * 
  */
 
 /**
@@ -108,6 +156,19 @@
  * The Dashboard updated and displayed the new group information.
  * The success message was "Group 1 created."
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 11:24
+ * Test results: PASS
+ *  POST /api/groups 201 in 16ms (next.js: 1.4ms, application-code: 15ms)
+    GET /api/groups 200 in 8ms (next.js: 3ms, application-code: 4ms)
+    GET /api/groups/mine 200 in 17ms (next.js: 2ms, application-code: 15ms)
+    Group is stored in database correctly.
+    Creator is added to the group as the first member
+    Dashboard is updated automatically to display new group information
+    Sucess message `Group 3 created` was displayed using toast function
+
  */
 
 /**
@@ -135,6 +196,17 @@
  * The student was added to the correct group in the database.
  * The Dashboard updated and displayed both group members correctly.
  * The success message was "Successfully joined the group."
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 11:34
+ * Test results: PASS
+ *  POST /api/groups/join 200 in 28ms (next.js: 2ms, application-code: 25ms)
+    GET /api/groups 200 in 13ms (next.js: 7ms, application-code: 6ms)
+    GET /api/groups/mine 200 in 24ms (next.js: 4ms, application-code: 20ms)
+    User Daren Kovacek (n10000015) was added to database under group Group 2 (G-29C18B)
+    Dashboard updated correctly to display Daren in the group with creator Camren Weimann (n10000013)
+    Success message displayed correctly.
  */
 
 /**
@@ -163,6 +235,38 @@
  * The student ID input was cleared after the invitation was sent.
  * The success message was "Invite sent to Clara Smith".
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 11:51
+ * Test results: PASS
+    [Resend API Error]: {
+    status: 403,
+    error: {
+        message: 'You can only send testing emails to your own email address (teamup.student1@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.',
+        name: 'validation_error',
+        statusCode: 403
+    },
+    path: '/emails'
+    }
+    Email send error: {
+    message: 'You can only send testing emails to your own email address (teamup.student1@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.',
+    name: 'validation_error',
+    statusCode: 403
+    }
+    POST /api/groups/invite 200 in 951ms (next.js: 94ms, application-code: 857ms)
+    Resend API errors are expected in this test, as randomly generated email addresses are not real,
+    Resend API key not configured to try and send emails to those addresses either, but this error indicates
+    that the email notification is correctly triggering when an invite is sent.
+    POST response shows that invite has been sent.
+    Database shows that student n10000020 in group G-505A80 sent an invite to student n10000018.
+    Invite status is correctly set to pending.
+    Success message was `Invite sent to Brock Altenworth`
+
+    ✓ Invite email sent to: teamup.student1@gmail.com
+    POST /api/groups/invite 200 in 972ms (next.js: 91ms, application-code: 881ms)
+    Successful email notification sent to Alice Chen using Resend API.
+ * 
  */
 
 /**
@@ -196,6 +300,21 @@
  * Daniel's invite status was updated to declined in the database.
  * The messages "You joined the group!" and "Invite declined." were displayed correctly.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 12:05
+ * Test results: PASS
+ *  POST /api/groups/respond-invite 200 in 53ms (next.js: 18ms, application-code: 35ms)
+    GET /api/groups 304 in 10ms (next.js: 6ms, application-code: 4ms)
+    GET /api/groups/mine 200 in 15ms (next.js: 4ms, application-code: 12ms)
+    Brock Altenworth accepted the invitation and was added to Group 4.
+    Brock's dashboard updated automatically to reflect the change in group status.
+    Invite status in database was updated to "accepted"
+    Karley Rutherford (n10000019) declined the invitation to Group 4.
+    Karley's dashboard updated to remove the invite pending section.
+    The invite status in the database is updated to declined.
+    Dashboard messages "You have joined the group" and "Invite declined" displayed correctly.
  */
 
 /**
@@ -228,6 +347,18 @@
  * The group status was updated to locked in the database.
  * The success message was "Group locked and confirmed valid!"
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 11/10/26 13:49
+ * Test results: PASS
+ *  POST /api/groups/lock 200 in 30ms (next.js: 13ms, application-code: 17ms)
+    GET /api/groups 200 in 11ms (next.js: 7ms, application-code: 4ms)
+    GET /api/groups/mine 200 in 19ms (next.js: 3ms, application-code: 16ms)
+    Group creator was able to lock with only 2 members (minimum size requirement not valid for groups anymore)
+    Non-creators cannot access the lock button when constraints are met
+    Success message displayed "Group locked. Membership changes now disabled."
+    Group status was set to "locked" in database
  */
 
 /**
@@ -258,6 +389,17 @@
  * After confirmation, the user was removed from the group in the database.
  * The Dashboard updated and displayed the ungrouped view correctly.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Test results: PASS
+ *  POST /api/groups/leave 200 in 27ms (next.js: 13ms, application-code: 13ms)
+ *  A confirmation window was displayed before leaving the group
+ *  Clicking cancel on the confirmation window keeps the user in the group.
+ *  Clicking ok removes the user
+ *  Dashboard is updated to the ungrouped view.
+ *  Database is updated to reflect that the student has left the group.
+ *  Group information is updated for other members to show that the user has left.
  */
 
 /**
@@ -283,4 +425,34 @@
  * The user was redirected to the login page.
  * The Sign in button was displayed correctly.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 12:57
+ * Test results: PASS
+ * POST /api/auth/logout 200 in 6ms (next.js: 2ms, application-code: 4ms)
+ * The user was signed out successfully and redirected to the login page.
+ */
+
+/**
+ * @function handleCopyTeamUpId
+ * 
+ * Test Criteria:
+ * Does the button copy the correct TeamUp ID to the user's clipboard for pasting elsewhere?
+ * 
+ * UNIT TEST #1
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 12:12
+ * Test results: PASS
+ * Manual source code inspection was completed.
+ * The function correctly writes the teamup id to the clipboard.
+ * An error is thrown if the teamup id is not present in the student object.
+ * 
+ * FUNCTIONAL TEST #1
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 12:15
+ * Test results: PASS
+ * TeamUp ID TU-991CA780-1 copied from Karley Rutherford's dashboard using the button.
+ * The message "TeamUp ID copied. Share it with classmates who need to invite you." was displayed correctly.
+ * 
  */

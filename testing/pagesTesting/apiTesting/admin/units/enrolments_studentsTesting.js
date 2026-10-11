@@ -34,7 +34,9 @@
  * Test results:
  * 
  * FUNCTIONAL (black box) TEST #1
- * Tester name:
- * Date and time:
- * Test results:
+ * Tester name: Brandon Farnsworth 
+ * Date and time: 11/10/26 12:28
+ * Test results: 
+ * 
+ * DELETE method: error not thrown properly when attempting to unenroll a student from a unit they were not enrolled in. FIXED IN GIT COMMIT 8f306773086e92bfc186f41513b2fb442e2f83c8
  */

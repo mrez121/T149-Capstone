@@ -28,6 +28,13 @@
  * All four dashboard cards were displayed correctly.
  * View Units, Create Unit and View Enrolments links were visible.
  * Nested functions will be tested separately below.
+ * 
+ * FUNCTIONAL TEST #1
+ * Tester: Brandon Farnsworth
+ * Date and time: 11/10/26 14:12
+ * Test results: PASS
+ * GET /tutor_dash 200 in 80ms (next.js: 51ms, application-code: 29ms)
+ * Admin dashboard loaded successfully, all elements rendered correctly.
  */
 
 /**
@@ -53,6 +60,11 @@
  * The message was "View All Groups is still in development."
  * The toast disappeared automatically after approximately 4.5 seconds.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Test results: NOT RUN
+ * Toasts are no longer used on this page as of 11/10/26
  */
 
 /**
@@ -79,4 +91,11 @@
  * The user was redirected to the login page.
  * The Sign in button was displayed correctly.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 11/10/26 14:15
+ * Test results: PASS
+ * POST /api/auth/logout 200 in 3ms (next.js: 1.1ms, application-code: 2ms)
+ * User was signed out and redirected to login page successfully.
  */
