@@ -1,8 +1,10 @@
 // pages/dashboard.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { Copy } from 'lucide-react';
+import { sendGroupInvite } from '../lib/invite';
+import AdminToast from '../components/AdminToast';
 
 /**
  * @default Dashboard
@@ -36,6 +38,9 @@ export default function Dashboard() {
   const [invites, setInvites] = useState([]);
   const [groupType, setGroupType] = useState('public');
   const [inviteTarget, setInviteTarget] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const inviteLock = useRef(false);
+  const toastTimer = useRef(null);
   const [toast, setToast] = useState(null);
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -111,9 +116,12 @@ export default function Dashboard() {
    * @param {*} type: Determines the visual formatting of the toast displayed
    */
   function showToast(msg, type = 'success') {
+    clearTimeout(toastTimer.current);
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500);
+    toastTimer.current = setTimeout(() => setToast(null), 4500);
   }
+
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   /**
    * @function handleCopyTeamUpId
@@ -245,23 +253,25 @@ export default function Dashboard() {
    */
   async function handleInviteStudent(e) {
     e.preventDefault();
+    if (inviteLock.current) return;
+    const target = inviteTarget.trim();
+    if (!target) {
+      showToast('Enter your classmate\'s TeamUp ID.', 'error');
+      return;
+    }
 
-    const res = await fetch('/api/groups/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        groupId: myGroup.group_id,
-        targetTeamUpId: inviteTarget,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      showToast(data.message);
+    inviteLock.current = true;
+    setInviting(true);
+    try {
+      const data = await sendGroupInvite(myGroup.group_id, target);
+      showToast(data.warning || data.message || 'Invite sent.', data.warning ? 'warning' : 'success');
       setInviteTarget('');
-    } else {
-      showToast(data.errors?.join(' ') || data.error, 'error');
+    } catch (error) {
+      showToast(error.message || 'Unable to send invite. Please try again.', 'error');
+      if (error.status === 401) router.push('/');
+    } finally {
+      inviteLock.current = false;
+      setInviting(false);
     }
   }
 
@@ -377,11 +387,7 @@ export default function Dashboard() {
         <title>TeamUp — Dashboard</title>
       </Head>
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>
-          {toast.msg}
-        </div>
-      )}
+      <AdminToast toast={toast} />
 
       <nav>
         <div className="logo">
@@ -884,6 +890,7 @@ export default function Dashboard() {
                             className="text-input"
                             placeholder="TeamUp ID e.g. TU-123456"
                             value={inviteTarget}
+                            disabled={inviting}
                             onChange={(e) =>
                               setInviteTarget(e.target.value)
                             }
@@ -898,8 +905,9 @@ export default function Dashboard() {
                           <button
                             className="btn btn-blue"
                             type="submit"
+                            disabled={inviting}
                           >
-                            Send invite
+                            {inviting ? 'Sending invite…' : 'Send invite'}
                           </button>
                         </form>
                       </>

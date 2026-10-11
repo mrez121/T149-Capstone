@@ -8,6 +8,7 @@ import {
   Search, UserRound, UserRoundPlus, UsersRound, X,
 } from 'lucide-react';
 import styles from '../styles/StudentDirectory.module.css';
+import { sendGroupInvite } from '../lib/invite';
 
 const INITIAL_FILTERS = {
   q: '', status: 'all', experience: 'all', cohort: '', slot: '', sort: 'name-asc', page: 1, pageSize: 25,
@@ -160,18 +161,12 @@ export default function StudentDirectory() {
     inviteLock.current = true;
     setInvitingId(targetTeamUpId);
     try {
-      const response = await fetch('/api/groups/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId: myGroup.group_id, targetTeamUpId }),
-      });
-      if (response.status === 401) { router.replace('/'); return; }
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.errors?.join(' ') || data.error || 'Unable to send invite.');
+      const data = await sendGroupInvite(myGroup.group_id, targetTeamUpId);
       setInvited((current) => [...current, targetTeamUpId]);
-      showToast(data.message || 'Invite sent.');
+      showToast(data.warning || data.message || 'Invite sent.', data.warning ? 'warning' : 'success');
     } catch (err) {
       showToast(err.message || 'Unable to send invite. Please try again.', 'error');
+      if (err.status === 401) router.replace('/');
     } finally {
       inviteLock.current = false;
       setInvitingId(null);
@@ -320,7 +315,7 @@ export default function StudentDirectory() {
           </footer>
         </section>
       </main>
-      {toast && <div className={toast.type === 'error' ? styles.errorToast : styles.toast} role={toast.type === 'error' ? 'alert' : 'status'}><span>{toast.message}</span><button type="button" className={styles.iconButton} aria-label="Dismiss notification" onClick={() => setToast(null)}><X size={16} /></button></div>}
+      {toast && <div className={toast.type === 'error' ? styles.errorToast : toast.type === 'warning' ? styles.warningToast : styles.toast} role={toast.type === 'error' ? 'alert' : 'status'} aria-atomic="true"><span>{toast.message}</span><button type="button" className={styles.iconButton} aria-label="Dismiss notification" onClick={() => setToast(null)}><X size={16} /></button></div>}
     </div>
   );
 }
