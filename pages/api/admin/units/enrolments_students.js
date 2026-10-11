@@ -105,7 +105,7 @@ export default async function handler(req, res) {
         //Grab student details from submitted form
         const {student_id, name, email} = req.body;
 
-        // Check unit exists and that the student is enrolled in the unit
+        // Check unit exists
         const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
         if(!unitCheck.length) return res.status(404).json({error: 'Student not enrolled in unit.'});
 
@@ -117,6 +117,15 @@ export default async function handler(req, res) {
             [student_id, name, email]
         );
         if(!studentCheck.length) return res.status(404).json({error: 'Student not found.'});
+
+        // Check student is enrolled in unit
+        const [studentInUnit] = await db.query(
+            `SELECT student_id FROM unit_enrolments WHERE unit_id = ? AND student_id = ?`,
+            [unit, student_id]
+        );
+        if(!studentInUnit.length) {
+            return res.status(404).json({error: "Student is not enrolled in this unit."});
+        }
 
         //If student is in a group, check that the group is locked, unlock if needed,
         //remove the student from the group and transfer ownership of the group to the next student if needed.
