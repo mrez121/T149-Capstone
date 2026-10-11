@@ -33,6 +33,8 @@ import {useState, useEffect} from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Link from "next/link";
+import AdminToast from '../../../components/AdminToast';
+import styles from '../../../styles/StudentEnrolments.module.css';
 
 /**
  * @function enrolmentsPage
@@ -40,10 +42,19 @@ import Link from "next/link";
  * @returns enrolments page HTML (if loading state = false) || loading HTML (if loading state = true)
  */
 export default function enrolmentsPage() {
-    //Router and states
+    /**
+     * @const router
+     * @const allUnits
+     * @const enrolments
+     * @const loading
+     * @const toast
+     * @const res
+     * @const data
+     */
     const router = useRouter();
     const [allUnits, setAllUnits] = useState([]);
     const [enrolments, setEnrolments] = useState([]);
+    const [selectedUnit, setSelectedUnit] = useState(null);
     const [loading, setLoading] = useState(true);
     const [toast, setToast] = useState(null);
 
@@ -84,9 +95,9 @@ export default function enrolmentsPage() {
      * If there is an error, display the error.
      * @param {*} unitCode 
      */
-    async function getEnrolments(unitCode) {
+    async function getEnrolments(unitId, unitCode) {
         //Pass unit code to URL parameters
-        const res = await fetch(`/api/admin/units/enrolments_students?unit=${unitCode}`, {method: 'GET'});
+        const res = await fetch(`/api/admin/units/enrolments_students?unit=${unitId}`, {method: 'GET'});
         const data = await res.json();
 
         //Check if the query was successful, throw an error if not.
@@ -95,6 +106,7 @@ export default function enrolmentsPage() {
             showToast(`${unitCode} enrolments fetched.`);
             //Store enrolments in state
             setEnrolments(data.enrolments);
+            setSelectedUnit(unitCode);
         }
         else {
             showToast(data.error, 'error');
@@ -104,7 +116,7 @@ export default function enrolmentsPage() {
     /**
      * @function handleLogout
      * @async
-     * Log out of the enrolents page and return to login page
+     * Log out of the enrolments page and return to login page
      */
     async function handleLogout() {
         await fetch("/api/auth/logout", {method: "POST"});
@@ -122,60 +134,114 @@ export default function enrolmentsPage() {
   return (
     &lt;>
       &lt;Head>&lt;title>TeamUp — Enrolments&lt;/title>&lt;/Head>
-      {toast &amp;&amp; &lt;div className={`toast toast-${toast.type}`}>{toast.msg}&lt;/div>}
+      &lt;AdminToast toast={toast} />
 
-      &lt;nav className="anav">
+      &lt;nav className={`anav ${styles.nav}`}>
         &lt;div className="anav-logo">Team&lt;span>Up&lt;/span> &lt;span className="admin-tag">Admin&lt;/span>&lt;/div>
-        &lt;Link href="/tutor_dash" className="anav-link">← Dashboard&lt;/Link>
+        &lt;Link href="/tutor_dash" className="anav-link anav-button">← Dashboard&lt;/Link>
         &lt;button className="logout-btn" onClick={handleLogout}>Sign out&lt;/button>
       &lt;/nav>
 
-    {/*Card constructions for units - same design as units page */}
-      {allUnits.length == 0 ? (
-        &lt;div className="aempty">
-            &lt;div className="aempty-icon">🏫&lt;/div>
-            &lt;div className="aempty-text">No units available&lt;/div>
+      &lt;main className={`acontainer ${styles.page}`}>
+        &lt;div className="apage-header">
+          &lt;div>
+            &lt;h1 className="apage-title">Student Enrolments&lt;/h1>
+            &lt;p className="apage-sub">Select a unit to view and manage its enrolled students&lt;/p>
+          &lt;/div>
         &lt;/div>
-      ) : (
-        &lt;div className="aunits-grid">
+
+        &lt;section className="apage-section">
+          &lt;div className="asection-header">
+            &lt;div>
+              &lt;h2 className="asection-title">Units&lt;/h2>
+              &lt;p className="asection-sub">Choose a unit to load its current enrolments&lt;/p>
+            &lt;/div>
+          &lt;/div>
+
+          {/*Card constructions for units - same design as units page */}
+          {allUnits.length == 0 ? (
+            &lt;div className="aempty aempty-panel">
+              &lt;div className="aempty-icon">🏫&lt;/div>
+              &lt;div className="aempty-text">No units available&lt;/div>
+            &lt;/div>
+          ) : (
+            &lt;div className="aunits-grid">
             {allUnits.map(u => (
-                &lt;div key = {u.id} className="aunit-card">
-                    &lt;div className="aunit-code">{u.unit_code}&lt;/div>
-                    &lt;div className="aunit-name">{u.unit_name}&lt;/div>
-                    &lt;div className="aunit-semester">{u.semester}&lt;/div>
-                    &lt;div className="aunit-actions">
-                        &lt;button className="abtn abtn-blue" onClick={() => getEnrolments(u.unit_code)}>{u.unit_code} Enrolments&lt;/button>
-                    &lt;/div>
+              &lt;div key={u.id} className="aunit-card">
+                &lt;div className="aunit-code">{u.unit_code}&lt;/div>
+                &lt;div className="aunit-name">{u.unit_name}&lt;/div>
+                &lt;div className="aunit-semester">{u.semester}&lt;/div>
+                &lt;div className="aunit-actions">
+                  &lt;button className="abtn abtn-blue" onClick={() => getEnrolments(u.id, u.unit_code)}>{u.unit_code} Enrolments&lt;/button>
+                  &lt;Link href={`/admin/units/${u.id}/enrol?unitCode=${u.unit_code}`} className="abtn abtn-teal abtn-sm">Enrol student&lt;/Link>
+                  &lt;Link href={`/admin/units/${u.id}/unenrol?unitCode=${u.unit_code}`} className="abtn abtn-red abtn-sm">Unenrol student&lt;/Link>
+                  &lt;Link href="/admin/units/csv-upload" className="abtn abtn-teal">📂 Upload CSV&lt;/Link>
                 &lt;/div>
+              &lt;/div>
             ))}
-        &lt;/div>
-      )}
+            &lt;/div>
+          )}
+        &lt;/section>
 
-    {/*List construct of students in a unit */}
+        {/* Compact enrolment list, using the same table treatment as the student directory. */}
+        &lt;section className="apage-section">
+          &lt;div className={`asection-header ${styles.resultsHeader}`}>
+            &lt;div>
+              &lt;h2 className="asection-title">Enrolment Results&lt;/h2>
+              &lt;p className="asection-sub">
+                {selectedUnit ? `Students enrolled in ${selectedUnit}` : 'Select a unit above to view its students'}
+              &lt;/p>
+            &lt;/div>
+            {selectedUnit &amp;&amp; (
+              &lt;span className={styles.studentCount} role="status">
+                {enrolments.length} student{enrolments.length === 1 ? '' : 's'} enrolled
+              &lt;/span>
+            )}
+          &lt;/div>
 
-      {enrolments.length === 0 ? (
-        &lt;div>
-            &lt;div className="aempty-text">No enrolments selected&lt;/div>
-        &lt;/div>
-      ) : (
-        &lt;div>
-            {enrolments.map(e => (
-                &lt;div key = {e.student_id}className="aconstraints-row">
-                    &lt;ul className="aempty-text">
-                        &lt;li>ID: {e.student_id}&lt;p>Name: {e.name}, Email: {e.email}&lt;/p>&lt;/li>
-                    &lt;/ul>
-                &lt;/div>
+          {enrolments.length > 0 &amp;&amp; (
+            &lt;p className={styles.scrollHint}>Scroll sideways to view all columns.&lt;/p>
+          )}
 
-            ))}
-        &lt;/div>
-      )}
+          {enrolments.length === 0 ? (
+            &lt;div className="aempty aempty-panel aempty-compact">
+              &lt;div className="aempty-icon">👥&lt;/div>
+              &lt;div className="aempty-text">
+                {selectedUnit ? `No students are enrolled in ${selectedUnit}` : 'No enrolments selected'}
+              &lt;/div>
+            &lt;/div>
+          ) : (
+            &lt;div
+              className={styles.tableWrap}
+              role="region"
+              aria-label={`Students enrolled in ${selectedUnit}`}
+              tabIndex={0}
+            >
+              &lt;table className={styles.table}>
+                &lt;caption className={styles.srOnly}>Students enrolled in {selectedUnit}&lt;/caption>
+                &lt;thead>
+                  &lt;tr>
+                    &lt;th scope="col">Name&lt;/th>
+                    &lt;th scope="col">Student ID&lt;/th>
+                    &lt;th scope="col">Email&lt;/th>
+                  &lt;/tr>
+                &lt;/thead>
+                &lt;tbody>
+                  {enrolments.map(e => (
+                    &lt;tr key={e.student_id}>
+                      &lt;td className={styles.studentName}>{e.name}&lt;/td>
+                      &lt;td className={styles.studentId}>{e.student_id}&lt;/td>
+                      &lt;td>{e.email || 'Not provided'}&lt;/td>
+                    &lt;/tr>
+                  ))}
+                &lt;/tbody>
+              &lt;/table>
+            &lt;/div>
+          )}
+        &lt;/section>
+      &lt;/main>
 
-        
-
-      &lt;style jsx>{`
-        .toast { position:fixed; top:20px; right:20px; z-index:999; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:500; }
-        .toast-success { background:rgba(63,185,80,.15); border:1px solid rgba(63,185,80,.4); color:#3FB950; }
-        .toast-error   { background:rgba(248,81,73,.15); border:1px solid rgba(248,81,73,.4); color:#F85149; }
+      &lt;style jsx global>{`
         .anav { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid #30363D; background:#161B22; }
         .anav-logo { font-size:20px; font-weight:700; color:#E6EDF3; display:flex; align-items:center; gap:10px; }
         .anav-logo span { color:#00C9A7; }
@@ -186,7 +252,13 @@ export default function enrolmentsPage() {
         .apage-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; flex-wrap:wrap; gap:16px; }
         .apage-title { font-size:26px; font-weight:700; margin-bottom:4px; color:#E6EDF3; }
         .apage-sub { font-size:14px; color:#8B949E; }
+        .apage-section + .apage-section { margin-top:36px; }
+        .asection-header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:16px; }
+        .asection-title { margin:0 0 4px; font-size:18px; font-weight:650; color:#E6EDF3; }
+        .asection-sub { margin:0; font-size:13px; color:#8B949E; }
         .aempty { text-align:center; padding:64px 24px; color:#8B949E; }
+        .aempty-panel { background:#161B22; border:1px solid #30363D; border-radius:12px; }
+        .aempty-compact { padding:36px 24px; }
         .aempty-icon { font-size:48px; margin-bottom:12px; }
         .aempty-text { font-size:16px; margin-bottom:8px; }
         .aunits-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
@@ -197,19 +269,12 @@ export default function enrolmentsPage() {
         .aconstraints-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
         .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:3px 10px; font-size:12px; }
         .aunit-stats { display:flex; gap:16px; font-size:13px; color:#8B949E; margin-top:4px; }
-        .aunit-actions { display:flex; gap:8px; margin-top:8px; }
-        .abtn { padding:9px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; display:inline-block; }
-        .abtn-sm { padding:6px 14px; font-size:12px; }
-        .abtn-blue { background:#1D6FE8; color:white; }
-        .abtn-blue:hover { background:#1353B0; }
-        .abtn-teal { background:rgba(0,201,167,.15); color:#00C9A7; border:1px solid rgba(0,201,167,.3); }
-        .abtn-teal:hover { background:rgba(0,201,167,.25); }
-        .abtn-red { background:rgba(248,81,73,.12); color:#F85149; border:1px solid rgba(248,81,73,.3); }
-        .abtn-red:hover { background:rgba(248,81,73,.22); }
+        .aunit-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
       `}&lt;/style>
     &lt;/>
   );
-}</code></pre>
+}
+</code></pre>
         </article>
     </section>
 
@@ -219,13 +284,13 @@ export default function enrolmentsPage() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#StudentDirectoryBuildsTeamUp'sstudentdirectorypageusingreact.js">StudentDirectoryBuilds TeamUp's student directory page using react.js</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#c">c</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#error">error</a></li><li><a href="global.html#existingInvite">existingInvite</a></li><li><a href="global.html#filterOptions">filterOptions</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleViewProfileOpentheprofilepagefortheselectedstudent.">handleViewProfileOpen the profile page for the selected student.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraintsDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraintsDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#inviteRows">inviteRows</a></li><li><a href="global.html#invitingId">invitingId</a></li><li><a href="global.html#isCreator">isCreator</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#newStudents">newStudents</a></li><li><a href="global.html#normalizedQuery">normalizedQuery</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pub:">pub:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#shared">shared</a></li><li><a href="global.html#sharedSlots">sharedSlots</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowashortfeedbackmessageafterinviteactionsorAPIerrors.">showToastShow a short feedback message after invite actions or API errors.</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#students">students</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#token">token</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Aug 23 2026 20:43:17 GMT+1000 (Australian Eastern Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

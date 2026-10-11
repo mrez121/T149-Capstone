@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/api/students/[id].js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/api/students/[id].js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// pages/api/students/[id].js
+
+import { getDb } from "../../../lib/db";
+import { requireAuth } from "../../../lib/session";
+
+/**
+ * @function handler
+ * @async
+ * This function handles HTTP requests for editing student profile information.
+ * It also handles editing of student availability.
+ * GET - get the timeslots for the unit the student is enrolled in.
+ * PUT - edit student profile and availability information for the specified user.
+ * @param {*} req the HTTP request used to determine functionality
+ * @param {*} res the HTTP response sent back to the calling page/function
+ * @returns a response status code and a json object
+ */
+export default async function handler(req, res) {
+    // Check that the user is an authenticated student
+    const student = requireAuth(req, res);
+    if(!student) {
+        return;
+    }
+    const db = getDb();
+    // Fetch the timeslots of the unit that the student is enrolled in.
+    if(req.method === 'GET') {
+        const [units] = await db.query(
+            'SELECT unit_id FROM unit_enrolments WHERE student_id = ? ORDER BY id LIMIT 1',
+            [student.studentId],
+        );
+        if (!units.length) {
+            return res.status(400).json({ error: 'Student is not enrolled in a unit.' });
+        }
+        const unit = units[0].unit_id;
+        const[timeslots] = await db.query(
+            'SELECT id, slot FROM timeslots WHERE unit_id = ? ORDER BY id', unit
+        );
+        return res.status(200).json({timeslots})
+    }
+
+    // update student profile or availability depending on form submitted
+    if(req.method === 'PUT') {
+
+        const submitType = req.body.submitType;
+
+        if(submitType === 'profile') {
+            const {preferred_name, remote_student, skills, interests, bio, contact_method, contact_handle} = req.body;
+            
+            const [studentExists] = await db.query('SELECT * FROM students WHERE student_id = ?', [student.studentId]);
+            if(!studentExists.length) {
+                return res.status(404).json({error: 'Student not found.'});
+            }
+
+            const update = await db.query(
+                `UPDATE student_profiles SET
+                preferred_name = ?,
+                bio = ?,
+                skills = ?,
+                interests = ?,
+                contact_method = ?,
+                contact_handle = ?,
+                remote_student = ?,
+                updated_at = CURRENT_TIMESTAMP
+                WHERE student_id = ?`,
+                [preferred_name, bio, skills, interests, contact_method, contact_handle, remote_student, student.studentId]
+            );
+
+            if(!update) {
+                return res.status(500).json({error: 'Failed to update availability - encountered a problem with the server.'});
+            }
+            return res.status(200).json({ok: true});
+        }
+        
+        if(submitType === 'availability') {
+            const {selectedSlots} = req.body;
+
+            const [studentExists] = await db.query('SELECT * FROM students WHERE student_id = ?', [student.studentId]);
+            if(!studentExists.length) {
+                return res.status(404).json({error: 'Student not found.'});
+            }
+
+            await db.query(
+                `DELETE FROM availability WHERE student_id = ?`,
+                [student.studentId]
+            );
+
+            for(let i = 0; i &lt; selectedSlots.length; i++) {
+                let update = await db.query(
+                    `INSERT INTO availability (student_id, slot) VALUES (?, ?)
+                    ON DUPLICATE KEY UPDATE id=id`,
+                    [student.studentId, selectedSlots[i]]
+                );
+                if(!update) {
+                    return res.status(500).json({error: 'Failed to update availability - encountered a problem with the server.'});
+                }
+            }
+            return res.status(200).json({ok: true});
+        }
+    }
+    return res.status(500).json({error: 'Unable to load data. Please try again.'});
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

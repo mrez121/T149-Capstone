@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: lib/large_data_seed.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: lib/large_data_seed.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// lib/large_data_seed.js
+// script to create a large data set of students for use in testing
+import * as mysql from 'mysql2/promise';
+import * as uuidv4 from 'uuid';
+import bcrypt from 'bcryptjs';
+import { faker, fakerEN_AU_ocker } from '@faker-js/faker';
+import * as fs from 'fs';
+import * as readline from 'readline';
+
+// interface for reading user input in command line
+const rl = readline.createInterface({input: process.stdin, output: process.stdout});
+
+// Static data from previous versions are included here alongside additional randomised data
+const students = [
+  { id: 'n10000001', name: 'Alice Chen',     email: 'teamup.student1@gmail.com',         is_new: 0, cohort: '2023', is_admin: 0 },
+  { id: 'n10000002', name: 'Ben Nguyen',     email: 'ben.nguyen@student.qut.edu.au',     is_new: 0, cohort: '2023', is_admin: 0 },
+  { id: 'n10000003', name: 'Clara Smith',    email: 'clara.smith@student.qut.edu.au',    is_new: 0, cohort: '2022', is_admin: 0 },
+  { id: 'n10000004', name: 'Daniel Park',    email: 'daniel.park@student.qut.edu.au',    is_new: 1, cohort: '2024', is_admin: 0 },
+  { id: 'n10000005', name: 'Eva Martinez',   email: 'eva.martinez@student.qut.edu.au',   is_new: 1, cohort: '2024', is_admin: 0 },
+  { id: 'n10000006', name: 'Frank Li',       email: 'frank.li@student.qut.edu.au',       is_new: 0, cohort: '2023', is_admin: 0 },
+  { id: 'n10000007', name: 'Grace Kim',      email: 'grace.kim@student.qut.edu.au',      is_new: 0, cohort: '2022', is_admin: 0 },
+  { id: 'n10000008', name: 'Henry Wilson',   email: 'henry.wilson@student.qut.edu.au',   is_new: 1, cohort: '2024', is_admin: 0 },
+  { id: 'n10000009', name: 'Isabella Jones', email: 'isabella.jones@student.qut.edu.au', is_new: 0, cohort: '2023', is_admin: 0 },
+  { id: 'n10000010', name: 'James Brown',    email: 'james.brown@student.qut.edu.au',    is_new: 0, cohort: '2022', is_admin: 0 },
+];
+const admins = [
+  {id: 'bfarnsworth', name: 'Brandon Farnsworth', email: 'bf@qut.edu.au', is_new: null, cohort: 'Admin', is_admin: 1},
+  {id: 'wlu',         name: 'Weiyi Lu',           email: 'wl@qut.edu.au', is_new: null, cohort: 'Admin', is_admin: 1},
+  {id: 'mrezwani',    name: 'Mehdi Rezwani',      email: 'mr@qut.edu.au', is_new: null, cohort: 'Admin', is_admin: 1},
+  {id: 'hwang',       name: 'Hongyun Wang',       email: 'hw@qut.edu.au', is_new: null, cohort: 'Admin', is_admin: 1},
+];
+
+// Timeslot tutorials for adding random availabilities
+const timeslots = [
+    'MON-09:00', 'MON-10:00', 'MON-11:00', 'MON-12:00', 'MON-13:00', 'MON-14:00', 'MON-15:00', 'MON-16:00',
+    'TUE-09:00', 'TUE-10:00', 'TUE-11:00', 'TUE-12:00', 'TUE-13:00', 'TUE-14:00', 'TUE-15:00', 'TUE-16:00',
+    'WED-09:00', 'WED-10:00', 'WED-11:00', 'WED-12:00', 'WED-13:00', 'WED-14:00', 'WED-15:00', 'WED-16:00',
+    'THU-09:00', 'THU-10:00', 'THU-11:00', 'THU-12:00', 'THU-13:00', 'THU-14:00', 'THU-15:00', 'THU-16:00',
+    'FRI-09:00', 'FRI-10:00', 'FRI-11:00', 'FRI-12:00', 'FRI-13:00', 'FRI-14:00', 'FRI-15:00', 'FRI-16:00',
+]
+
+/**
+ * @function generateStudents
+ * @async
+ * Generate randomised student data generator, allowing for realistic looking data to be added to test databases.
+ * @param {int} count - the number of students to be generated.
+ * @returns users - an array of users containing randomly generated data.
+ */
+async function generateStudents(count) {
+    //arrays for student profile construction
+    const contactMethodOptions = ['phone', 'email', 'Discord', 'Instagram'];
+    const fakerModules = ['music', 'book', 'animal', 'food'];
+
+    // Set seed for consistent data generation. Remove or comment out to get fully random data
+    faker.seed(7);
+
+    const users = await Promise.all(
+        Array.from({length: count}, async (v, i) => {
+            //RNG values
+            const cMNumber = faker.number.int({min: 0, max: 3});
+            const fMNumber = faker.number.int({min: 0, max: 3});
+            const numAvailSlots = faker.number.int({min: 1, max: 40});
+            
+            //students table entries
+            const studentId = `n${10000011 + i}`;
+            const firstName = faker.person.firstName();
+            const lastName = faker.person.lastName();
+            const email = `${firstName}.${lastName}@student.qut.edu.au`;
+            const hash = bcrypt.hashSync('password123', 10);
+            const teamupId = `TU-${uuidv4.v4().slice(0, 10).toUpperCase()}`;
+            const isNew = faker.number.int({min: 0, max: 1});
+            const cohort = faker.number.int({min: 2016, max: 2024});
+            const isAdmin = 0;
+         
+            //student profile entries
+            const bio = faker.person.bio();
+            const skills = faker.lorem.sentences();
+            const remoteStudent = faker.number.int({min: 0, max: 1});
+            const contactMethod = contactMethodOptions[cMNumber];
+            let contactHandle = '';
+            if(contactMethod === 'phone') {
+                contactHandle = fakerEN_AU_ocker.phone.number();
+            }
+            if(contactMethod === 'email') {
+                contactHandle = faker.internet.exampleEmail({firstName: firstName});
+            }
+            if(contactMethod === 'Discord' || contactMethod === 'Instagram') {
+                contactHandle = faker.internet.username();
+            }
+            let interests = '';
+            const interestCategory = fakerModules[fMNumber];
+            if(interestCategory === 'music') {
+                interests = faker.music.artist();
+            }
+            if(interestCategory === 'book') {
+                interests = faker.book.title();
+            }
+            if(interestCategory === 'animal') {
+                interests = faker.animal.type();
+            }
+            if(interestCategory === 'food') {
+                interests = faker.food.dish();
+            }
+
+            //student availability entries
+            let slots = [];
+            for(let j = 0; j &lt; numAvailSlots; j++) {
+                const rng = faker.number.int({min: 0, max: 39});
+                const timeslot = timeslots[rng];
+                slots.push(timeslot);
+            }
+
+            return {
+                student_id: studentId,
+                teamup_id: teamupId,
+                name: `${firstName} ${lastName}`,
+                email: email,
+                password: hash,
+                is_new: isNew,
+                cohort: cohort,
+                is_admin: isAdmin,
+                preferred_name: firstName,
+                bio: bio,
+                skills: skills,
+                interests: interests,
+                contact_method: contactMethod,
+                contact_handle: contactHandle,
+                remote_student: remoteStudent,
+                slots: slots,
+            };
+        }),
+    );
+
+    return users;
+}
+
+/**
+ * @function ask
+ * Ask a question to the user via the CLI.
+ * @param {String} question - the question prompt asked to the user.
+ * @returns a promise to resolve whatever input was provided by the user.
+ */
+function ask(question) {
+    return new Promise(resolve => rl.question(question, resolve));
+}
+
+/**
+ * @function seed
+ * @async
+ * Set-up script for TeamUp application. Prompts the user for their MySQL details, connects to the database, writes an environment file for later application use,
+ * then creates the teamup database and seeds data into the database.
+ */
+async function seed() {
+    // create prompt user for env.local details to be written (and used in subsequent connection)
+    console.log('\n🚀 TeamUp Setup\n');
+
+    const host = await ask('MySQL host (press Enter for localhost): ') || 'localhost';
+    const port = await ask('MySQL port (press Enter for 3306: ') || '3306';
+    const user = await ask('MySQL username (press Enter for root): ') || 'root';
+    const password = await ask('MySQL password: ');
+    
+    // test connection to database
+    try {
+        const testConn = await mysql.createConnection({host, port, user, password});
+        await testConn.end();
+        console.log('✓ MySQL connection successful');
+    } catch(err) {
+        console.error('✗ Could not connect to MySQL: ', err.message);
+        rl.close();
+        process.exit(1);
+    }
+
+    // Write .env.local for later use
+    const env = `MYSQL_HOST=${host}\n
+    MYSQL_PORT=${port}\n
+    MYSQL_USER=${user}\n
+    MYSQL_PASSWORD=${password}\n
+    MYSQL_DATABASE=teamup\n
+    JWT_SECRET=teamup-jwt-secret-key-2026-qut-ifb398\n
+    RESEND_API_KEY=re_H6y9jWci_AqPMNdihSmcNMnbMEoiuqube\n`;
+
+    fs.writeFileSync('.env.local', env);
+    console.log('✓ .env.local created');
+    
+    // Seed database
+    try {
+        const conn = await mysql.createConnection({host, port: Number(port), user, password});
+        
+        console.log('Deleting old data from TeamUp...');
+        await conn.query('DROP DATABASE IF EXISTS teamup');
+        
+        console.log('Creating new TeamUp database...')
+        await conn.query('CREATE DATABASE IF NOT EXISTS teamup');
+        await conn.query('USE teamup');
+        console.log('Database created');
+
+        /**
+         * students table
+         * stores the users of teamup, both students and admins.
+         * student_id - QUT system username (e.g., n10000001)
+         * teamup_id - an autogenerated uuid
+         * is_admin flag: 0 = student user, 1 = admin user
+         */
+        console.log('Creating students table...');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS students (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            student_id  VARCHAR(20) UNIQUE NOT NULL,
+            teamup_id   VARCHAR(20) UNIQUE NOT NULL,
+            name        VARCHAR(100) NOT NULL,
+            email       VARCHAR(100) UNIQUE NOT NULL,
+            password    VARCHAR(255) NOT NULL,
+            is_new      TINYINT DEFAULT 0,
+            cohort      VARCHAR(10) NOT NULL,
+            is_admin    TINYINT DEFAULT 0
+            )`
+        );
+        console.log('students table created');
+
+        /**
+         * units table
+         * stores the units created by administrator users
+         * unit_code - must be unique code (e.g. IFB399)
+         * created_by - must reference a student_id where is_admin = 1
+         * Each unit has its own group formation context
+         */
+        console.log('Creating units table...');
+        await conn.query(
+            `CREATE TABLE IF NOT EXISTS units(
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            unit_code   VARCHAR(20) UNIQUE NOT NULL,
+            unit_name   VARCHAR(100) NOT NULL,
+            semester    VARCHAR(20) NOT NULL,
+            created_by  VARCHAR(20) NOT NULL,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES students(student_id) 
+            )`
+        );
+        console.log('units table created');
+
+        /**
+         * unit_constraints table
+         * stores the constraints for group and team formation (e.g., min and max size)
+         */
+        console.log('Creating unit_constraints table...');
+        await conn.query(
+            `CREATE TABLE IF NOT EXISTS unit_constraints(
+            id        INT AUTO_INCREMENT PRIMARY KEY,
+            unit_id   INT NOT NULL,
+            min_size  INT DEFAULT 4,
+            max_size  INT DEFAULT 5,
+            max_new   INT DEFAULT 2,
+            FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE
+            )`
+        );
+        console.log('unit_constraints table created');
+
+        /**
+         * unit_enrolments table
+         * links students to units
+         */
+        console.log('Creating unit_enrolments table...');
+        await conn.query(
+            `CREATE TABLE IF NOT EXISTS unit_enrolments(
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            unit_id     INT NOT NULL,
+            student_id  VARCHAR(20) NOT NULL,
+            UNIQUE KEY unique_enrolment (unit_id, student_id),
+            FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
+            )`
+        );
+        console.log('unit_enrolments table created');
+
+        /**
+         * timeslots table
+         * stores the timeslots for unit tutorials/meetings
+         */
+        console.log('Creating timeslots table...');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS timeslots (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            slot VARCHAR(20) UNIQUE NOT NULL,
+            unit_id INT NOT NULL,
+            FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE
+            )`
+        );
+        console.log('timeslots table created')
+
+        /**
+         * groups table
+         * stores the groups created by students within a each unit
+         * group_id - autogenerated uuid
+         * type - public or private group types
+         * status - forming or locked types
+         * created_by - the student that created the group (determines who can invite or lock the group)
+         * unit_id - references the id value of a unit from the units table
+         */
+        console.log('Creating groups table');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS \`groups\` (
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            group_id    VARCHAR(20) UNIQUE NOT NULL,
+            name        VARCHAR(100) NOT NULL,
+            type        ENUM('public','private') DEFAULT 'public',
+            status      ENUM('forming','locked') DEFAULT 'forming',
+            shared_slot VARCHAR(20),
+            created_by  VARCHAR(20) NOT NULL,
+            created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            unit_id     INT DEFAULT NULL,
+            FOREIGN KEY (created_by) REFERENCES students(student_id),
+            FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
+            FOREIGN KEY (shared_slot) REFERENCES timeslots(slot) ON DELETE SET NULL
+            )`
+        );
+        console.log('groups table created');
+
+        /**
+         * group_members table
+         * stores the members of a group.
+         */
+        console.log('Creating group_members table...');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS group_members (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            group_id   VARCHAR(20) NOT NULL,
+            student_id VARCHAR(20) NOT NULL,
+            joined_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_member (group_id, student_id),
+            FOREIGN KEY (group_id)   REFERENCES \`groups\`(group_id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
+            )`
+        );
+        console.log('group_members table created');
+
+        /**
+         * teams table
+         * stores the teams for a unit created by administrator. 1 team can be made up of multiple groups
+         */
+        console.log('Creating teams table...');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS teams (
+            id              INT AUTO_INCREMENT PRIMARY KEY,
+            team_id         VARCHAR(20) UNIQUE NOT NULL,
+            name            VARCHAR(100) NOT NULL,
+            unit_id         INT DEFAULT NULL,
+            current_size    INT DEFAULT 0,
+            created_by      VARCHAR(20) NOT NULL,
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by) REFERENCES students(student_id)
+            )`
+        );
+        console.log('teams table created');
+
+        /**
+         * team_groups table
+         * stores the groups that are part of a team
+         */
+        console.log('Creating team_groups table...');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS team_groups(
+            id          INT AUTO_INCREMENT PRIMARY KEY,
+            team_id     VARCHAR(20) NOT NULL,
+            group_id    VARCHAR(20) NOT NULL,
+            UNIQUE KEY unique_group (team_id, group_id),
+            FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
+            FOREIGN KEY (group_id) REFERENCES \`groups\`(group_id) ON DELETE CASCADE
+            )`
+        );
+        console.log('team_groups table created');
+
+        /**
+         * invites table
+         * stores the invites that a group creator can send to another student 
+         * unique_invite - prevents a group creator from sending multiple invites to the same student
+         */
+        console.log('Creating invites table...')
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS invites (
+            id              INT AUTO_INCREMENT PRIMARY KEY,
+            group_id        VARCHAR(20) NOT NULL,
+            from_student_id VARCHAR(20) NOT NULL,
+            to_student_id   VARCHAR(20) NOT NULL,
+            status          ENUM('pending','accepted','declined') DEFAULT 'pending',
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_invite (group_id, to_student_id),
+            FOREIGN KEY (group_id)        REFERENCES \`groups\`(group_id) ON DELETE CASCADE,
+            FOREIGN KEY (from_student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+            FOREIGN KEY (to_student_id)   REFERENCES students(student_id) ON DELETE CASCADE
+            )`
+        );
+        console.log('invites table created');
+
+        
+
+        /**
+         * availability table
+         * the list of timeslots that a student has indicated they are available for.
+         */
+        console.log('Creating availability table...');
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS availability (
+            id         INT AUTO_INCREMENT PRIMARY KEY,
+            student_id VARCHAR(20) NOT NULL,
+            slot       VARCHAR(20) NOT NULL,
+            UNIQUE KEY unique_slot (student_id, slot),
+            FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+            FOREIGN KEY (slot) REFERENCES timeslots(slot) ON DELETE CASCADE
+            )`
+        );
+        console.log('availability table created');
+
+        /**
+         * student_profiles table
+         * stores the profile information that a student adds to their profile
+         */
+        console.log('Creating student_profiles table...');
+        await conn.query(
+            `CREATE TABLE IF NOT EXISTS student_profiles(
+            id              INT AUTO_INCREMENT PRIMARY KEY,
+            student_id      VARCHAR(20) UNIQUE NOT NULL,
+            preferred_name  VARCHAR(100),
+            bio             TEXT,
+            skills          VARCHAR(255),
+            interests       VARCHAR(255),
+            contact_method  VARCHAR(50),
+            contact_handle  VARCHAR(100),
+            remote_student  TINYINT DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (student_id) REFERENCES students(student_id)
+            )`
+        );
+        console.log('student_profiles table created');
+
+        console.log('All database tables created!');
+
+        console.log('Seeding static students...');
+        for(const s of students) {
+            const hash = bcrypt.hashSync('password123', 10);
+            const teamupId = `TU-${uuidv4.v4().slice(0, 10).toUpperCase()}`;
+            await conn.query(
+                `INSERT IGNORE INTO students (student_id, teamup_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [s.id, teamupId, s.name, s.email, hash, s.is_new, s.cohort, s.is_admin]
+            );
+        }
+        console.log('10 static students added to database');
+
+        console.log('Seeding static admins...');
+        for(const a of admins) {
+            const hash = bcrypt.hashSync('password123', 10);
+            const teamupId = `TU-${uuidv4.v4().slice(0, 10).toUpperCase()}`;
+            await conn.query(
+                `INSERT IGNORE INTO students (student_id, teamup_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [a.id, teamupId, a.name, a.email, hash, a.is_new, a.cohort, a.is_admin]
+            );
+        }
+        console.log('4 static admins added to database');
+
+        console.log('Generating a unit for student enrolments...');
+        await conn.query(
+            `INSERT IGNORE INTO units (unit_code, unit_name, semester, created_by) VALUES (?, ?, ?, ?)`,
+            ['IFB398', 'Capstone Phase 1', 'Semester 2 2026', 'bfarnsworth']
+        );
+        console.log('Unit IFB398 added to database\nAdding constraints...');
+        await conn.query(
+            `INSERT IGNORE INTO unit_constraints (unit_id, min_size, max_size, max_new) VALUES (?, ?, ?, ?)`,
+            [1, 4, 5, 2]
+        );
+        console.log("Constraints added to IFB398");
+
+        console.log('Generating timeslots...');
+        for(let i = 0; i &lt; timeslots.length; i++) {
+            await conn.query(
+                `INSERT INTO timeslots (slot, unit_id) VALUES (?, ?)`,
+                [timeslots[i], 1]
+            );
+        }
+        console.log('40 timeslots added');
+
+        console.log('Generating random students...');
+        const users = await generateStudents(250);
+        console.log();
+        for(const u of users) {
+            console.log(`Adding student ${u.student_id} to database...`);
+            await conn.query(
+                `INSERT IGNORE INTO students (student_id, teamup_id, name, email, password, is_new, cohort, is_admin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [u.student_id, u.teamup_id, u.name, u.email, u.password, u.is_new, u.cohort, u.is_admin]
+            );
+            console.log(`Adding ${u.student_id}'s profile to database...`);
+            await conn.query(
+                `INSERT IGNORE INTO student_profiles (student_id, preferred_name, bio, skills, interests, contact_method, contact_handle, remote_student) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [u.student_id, u.preferred_name, u.bio, u.skills, u.interests, u.contact_method, u.contact_handle, u.remote_student]
+            );
+            console.log(`Adding ${u.student_id}'s availability to database...`);
+            for(let i = 0; i &lt; u.slots.length; i++) {
+                await conn.query(
+                    `INSERT IGNORE INTO availability (student_id, slot) VALUES (?, ?)`,
+                    [u.student_id, u.slots[i]]
+                );
+            }
+            console.log(`Enrolling ${u.student_id} in IFB398...`);
+            await conn.query(
+                `INSERT IGNORE INTO unit_enrolments (unit_id, student_id) VALUES (?, ?)`,
+                [1, u.student_id]
+            );
+            console.log(`Student ${u.student_id}: ${u.name} added to database!`);
+        }
+
+        await conn.end();
+        rl.close();
+
+        console.log('250 random students added to database');
+        console.log('Setup complete!\nUse:\n npm run dev\n to launch TeamUp');     
+
+    } catch(err) {
+        console.error("Error seeding database", err);
+        rl.close();
+        process.exit(1);
+    }
+}
+
+// Run the seed
+seed();</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

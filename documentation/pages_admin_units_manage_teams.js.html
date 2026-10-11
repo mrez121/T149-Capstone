@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/admin/units/manage_teams.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/admin/units/manage_teams.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// pages/admin/units/manage_teams
+// Lists teams within a unit for the administrator to assign groups to
+
+import { Fragment, useState, useEffect, useRef } from "react";
+import { useRouter } from "next/router";
+import Head from 'next/head';
+import Link from "next/link";
+import AdminToast from "../../../components/AdminToast";
+
+const SELECTED_UNIT_KEY = 'teamup.admin.manageGroups.unitId';
+const DEFAULT_TEAM_FILTERS = {size: 'all', page: 1, pageSize: 25};
+
+/**
+ * @function ManageTeamsPage
+ * Builds the Manage Teams page using react.js
+ * @returns Manage Teams page HTML (if loading state = false) || Loading HTML (if loading state = true)
+ */
+export default function ManageTeamsPage() {
+
+    const router = useRouter();
+    const [allUnits, setAllUnits] = useState([]);
+    const [selectedUnit, setSelectedUnit] = useState(null);
+    const [selectedUnitId, setSelectedUnitId] = useState(null);
+    const [teams, setTeams] = useState([]);
+    
+    const [teamFilters, setTeamFilters] = useState(DEFAULT_TEAM_FILTERS);
+    const [pagination, setPagination] = useState(null);
+    const [teamError, setTeamError] = useState(null);
+    const [groupError, setGroupError] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [toast, setToast] = useState(null);
+    const [loadingTeams, setLoadingTeams] = useState(false);
+    
+    const teamsRequestRef = useRef(false);
+    const addGroupRequestRef = useRef(null);
+    const removeGroupRequestRef = useRef(null);
+    const toastTimerRef = useRef(null);
+
+    useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+    /**
+     * @function loadUnits
+     * @async
+     * Load all units from the database into the manage_teams page
+     */
+    async function loadUnits() {
+        try {
+            const res = await fetch('/api/admin/units');
+            if(res.status === 401) {
+                router.push('/');
+                return;
+            }
+            if(res.status === 403) {
+                router.push('/tutor_dash');
+                return;
+            }
+            
+            const data = await res.json();
+            if(!res.ok) {
+                showToast(data.error || 'Failed to load units. Please reload the page.', 'error');
+                return;
+            }
+
+            const units = data.units || [];
+            setAllUnits(units);
+
+            let savedUnitId = null;
+            try {
+                savedUnitId = sessionStorage.getItem(SELECTED_UNIT_KEY);
+            } catch {
+                // Loading teams must still work when browser storage is unavailable
+            }
+            
+        } catch {
+            showToast('Unable to load units. Please reload the page.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Load content
+    useEffect(() => {loadUnits();}, []);
+
+    /**
+     * @function showToast
+     * Show a notification for four seconds, replacing the previous notification timer.
+     * @param {*} msg - the message to be displayed
+     * @param {*} type - the type of message
+     */
+    function showToast(msg, type = 'success') {
+        clearTimeout(toastTimerRef.current);
+        setToast({msg, type});
+        toastTimerRef.current = setTimeout(() => setToast(null), 4000);
+    }
+
+    /**
+     * @function handleLogout
+     * @async
+     * Log out of the manage teams page and return to the login page
+     */
+    async function handleLogout() {
+        await fetch('/api/auth/logout', {method: 'POST'});
+        router.push('/');
+    }
+
+    /**
+     * @function getTeams
+     * @async
+     * Get all teams in a specified unit in accordance with user provided filters
+     * @param {*} unitId - the id of the unit to fetch teams for
+     * @param {*} unitCode - the code/name of the unit to fetch teams for
+     * @param {*} notify - whether to show a successful manual query notification
+     * @param {*} nextFilters - filters and page to request; new courses use the defaults
+     */
+    async function getTeams(unitId, unitCode, notify = true, nextFilters = DEFAULT_TEAM_FILTERS) {
+        // Keep an older list response from overwriting completed team operations (adding group, removing group).
+        console.log('getTeams triggered');
+        if(teamsRequestRef.current || addGroupRequestRef.current !== null || removeGroupRequestRef.current !== null) {
+            return;
+        }
+        teamsRequestRef.current = true;
+        setLoadingTeams(true);
+        setTeamError(null);
+        setSelectedUnitId(unitId);
+        setSelectedUnit(unitCode);
+        setTeamFilters(nextFilters);
+
+        try {
+            const query = new URLSearchParams({unit: unitId, ...nextFilters});
+            const res = await fetch(`/api/admin/units/teams?${query}`, {method: 'GET'});
+            const data = await res.json();
+            if(!res.ok) {
+                throw new Error(data.error || 'Failed to load teams. Please try again.');
+            }
+
+            setTeams(data.teams);
+            setPagination(data.pagination);
+            setTeamFilters({...nextFilters, page: data.pagination.page});
+
+            try {
+                sessionStorage.setItem(SELECTED_UNIT_KEY, String(unitId));
+            } catch {
+                // Current results remain usable without remembering the selection
+            }
+            if(notify) {
+                showToast(`${unitCode} teams fetched.`);
+            }
+        } catch(error) {
+            setTeams([]);
+            setPagination(null);
+            setTeamError(error.message || 'Unable to load teams. Please try again.');
+        } finally {
+            teamsRequestRef.current = false;
+            setLoadingTeams(false);
+        }
+    }
+
+    /**
+     * @function deleteTeam
+     * @async
+     * delete a team from the specified unit
+     * @param {*} teamId - id of the team to be deleted
+     * @param {*} teamName - name of the team to be deleted
+     * @param {*} unitId - id of the unit the team is in
+     */
+    async function deleteTeam(teamId, teamName, unitId) {
+        if(!confirm(`Delete team ${teamName}? This cannot be undone.`)) {
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/admin/units/teams?team=${teamId}&amp;name=${teamName}&amp;unit=${unitId}`, {method: 'DELETE'});
+            const data = await res.json();
+            if(data.ok) {
+                showToast(`Team ${teamName} deleted.`);
+                loadUnits();
+                getTeams(selectedUnitId, selectedUnit);
+            }
+            
+        } catch {
+            showToast('Unable to delete team. Please try again.', 'error');
+        }        
+    }
+
+
+    // Loading graphic
+    if(loading) return (
+        &lt;div style={{ background:'#0D1117', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', color:'#8B949E' }}>
+            Loading...
+        &lt;/div>
+    );
+
+    return (
+        &lt;>
+            &lt;Head>&lt;title>TeamUp - Manage Teams&lt;/title>&lt;/Head>
+            &lt;AdminToast toast={toast}/>
+
+            &lt;nav className="anav">
+                &lt;div className="anav-logo">Team&lt;span>Up&lt;/span> &lt;span className="admin-tag">Admin&lt;/span>&lt;/div>
+                &lt;Link href='/tutor_dash' className="anav-link anav-button">← Dashboard&lt;/Link>
+                &lt;button className="logout-btn" onClick={handleLogout}>Sign out&lt;/button>
+            &lt;/nav>
+
+            &lt;main className="acontainer">
+                &lt;div className="apage-header">
+                    &lt;div>
+                        &lt;h1 className="apage-title">Manage Teams&lt;/h1>
+                        &lt;p className="apage-sub">Select a unit to review its teams&lt;/p>
+                    &lt;/div>
+                &lt;/div>
+
+                &lt;section className="apage-section">
+                    &lt;div className="asection-header">
+                        &lt;div>
+                            &lt;h2 className="asection-title">Units&lt;/h2>
+                            &lt;p className="asection-sub">Choose a unit to load its current teams&lt;/p>
+                        &lt;/div>
+                    &lt;/div>
+
+                    {/*Card construction for units - same design as units, enrolments, and groups pages */}
+                    {allUnits.length == 0? (
+                        &lt;div className="aempty aempty-panel">
+                            &lt;div className="aempty-icon">🏫&lt;/div>
+                            &lt;div className="aempty-text">No units available&lt;/div>
+                        &lt;/div>
+                    ) : (
+                        &lt;div className="aunits-grid">
+                            {allUnits.map(u => (
+                                &lt;div key={u.id} className="aunit-card">
+                                    &lt;div className="aunit-code">{u.unit_code}&lt;/div>
+                                    &lt;div className="aunit-name">{u.unit_name}&lt;/div>
+                                    &lt;div className="aunit-semester">{u.semester}&lt;/div>
+                                    &lt;div className="aunit-stats">
+                                        &lt;span>📁 {u.team_count || 0} teams&lt;/span>
+                                        &lt;span>📁 {u.locked_count || 0} locked groups&lt;/span>
+                                    &lt;/div>
+                                    &lt;div className="aunit-actions">
+                                        &lt;button className="abtn abtn-blue" disabled={loadingTeams} onClick={() => getTeams(u.id, u.unit_code)}>{u.unit_code} Teams&lt;/button>
+                                        &lt;Link href={`/admin/units/${u.id}/add-team?unitCode=${u.unit_code}`} className="abtn abtn-teal abtn-sm">Add team&lt;/Link>
+                                    &lt;/div>
+                                &lt;/div>
+                            ))}
+                        &lt;/div>
+                    )}
+                &lt;/section>
+
+                {/*List construct of teams in a unit */}
+                &lt;section className="apage-section">
+                    &lt;div className="asection-header">
+                        &lt;div>
+                            &lt;h2 className="asection-title">Team Results&lt;/h2>
+                            &lt;p className="asection-sub">
+                                {loadingTeams ? 'Loading teams...' : selectedUnit ? `Teams in ${selectedUnit}` : `Select a unit above to view its teams`}
+                            &lt;/p>
+                        &lt;/div>
+                    &lt;/div>
+
+                    {selectedUnit &amp;&amp; (
+                        &lt;div className="agroup-filters">
+                            &lt;label>Team size
+                                &lt;select value={teamFilters.size} disabled={loadingTeams}
+                                onChange={e => getTeams(selectedUnitId, selectedUnit, false, {...teamFilters, size: e.target.value, page: 1})}>
+                                    &lt;option value='all'>All sizes&lt;/option>
+                                    {[0, 1, 2, 3, 4, 5].map(size => &lt;option key={size} value={size}>{size === 0 ? '0 (empty)': `${size} ${size === 1 ? 'member' : 'members'}`}&lt;/option>)}
+                                &lt;option value='6+'>6 or more members&lt;/option>
+                                &lt;/select>
+                            &lt;/label>
+                            &lt;label>Teams per page
+                                &lt;select value={teamFilters.pageSize} disabled={loadingTeams}
+                                    onChange={e => getTeams(selectedUnitId, selectedUnit, false, {...teamFilters, pageSize: Number(e.target.value), page: 1})}>
+                                    {[10, 25, 50, 100].map(size => &lt;option key={size} value={size}>{size}&lt;/option>)}
+                                &lt;/select>
+                            &lt;/label>
+                            &lt;button className="abtn abtn-ghost" disabled={loadingTeams}
+                                onClick={() => getTeams(selectedUnitId, selectedUnit, false, {...DEFAULT_TEAM_FILTERS, pageSize: teamFilters.pageSize})}>Clear filters&lt;/button>
+                            &lt;button className="abtn abtn-ghost" disabled={loadingTeams}
+                                onClick={() => getTeams(selectedUnitId, selectedUnit, false, teamFilters)}>Refresh teams&lt;/button>
+                        &lt;/div>
+                    )}
+
+                    {loadingTeams || teamError || teams.length === 0 ? (
+                        &lt;div className="aempty aempty-panel aempty-compact">
+                            &lt;div className="aempty-icon">📁&lt;/div>
+                            &lt;div className="aempty-text" role={teamError ? 'alert' : 'status'}>
+                                {loadingTeams ? 'Loading teams...' : teamError || (selectedUnit ? 'No teams match these filters. Clear filters or try another unit.' : 'Select a unit above to view its groups')}
+                            &lt;/div>
+                        &lt;/div>
+                    ) : (
+                        &lt;div className="agroups-scroll" role="region" aria-label={`Teams in ${selectedUnit}`} tabIndex={0}>
+                            &lt;table className="agroups-table" aria-label={`Teams in ${selectedUnit}`} aria-busy={loadingTeams}>
+                                &lt;thead>
+                                    &lt;tr>
+                                        &lt;th scope='col'>Team&lt;/th>
+                                        &lt;th scope='col'>Size&lt;/th>
+                                        &lt;th scope='col'>Action&lt;/th>
+                                    &lt;/tr>
+                                &lt;/thead>
+                                &lt;tbody>
+                                    {teams.map(e => (
+                                        &lt;Fragment key={e.team_id}>
+                                            &lt;tr>
+                                                &lt;th scope='row'>
+                                                    &lt;div className="adata-name">{e.name}&lt;/div>
+                                                    &lt;div className="adata-id">{e.team_id}&lt;/div>
+                                                &lt;/th>
+                                                &lt;td>{e.current_size}&lt;/td>
+                                                &lt;td className="aunit-actions">
+                                                    &lt;Link
+                                                        href={`/admin/units/${selectedUnitId}/teams/${e.team_id}/groups?name=${e.name}&amp;unitCode=${selectedUnit}`}
+                                                        className="abtn abtn-teal">
+                                                        Add/Remove Groups
+                                                    &lt;/Link>
+                                                    &lt;Link
+                                                        href={`/admin/units/${selectedUnitId}/teams/${e.team_id}?name=${e.name}`}
+                                                        className="abtn abtn-ghost">
+                                                        {`Edit ${e.name}`}
+                                                    &lt;/Link>
+                                                    &lt;button
+                                                        className="abtn abtn-red"
+                                                        disabled={loadingTeams}
+                                                        onClick={() => deleteTeam(e.team_id, e.name, selectedUnitId)}>
+                                                        {`Delete ${e.name}`}
+                                                    &lt;/button>
+                                                &lt;/td>
+                                            &lt;/tr>
+                                        &lt;/Fragment>
+                                    ))}
+                                &lt;/tbody>
+                            &lt;/table>
+                        &lt;/div>
+                    )}
+                    {pagination &amp;&amp; !loadingTeams &amp;&amp; !teamError &amp;&amp; (
+                        &lt;div className='agroup-pagination'>
+                            &lt;span role='status'>Showing {pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1}-{Math.min(pagination.page *pagination.pageSize, pagination.total)} of {pagination.total} teams&lt;/span>
+                            &lt;div className='agroup-page-buttons'>
+                                &lt;button className="abtn abtn-ghost" disabled={pagination.page === 1}
+                                    onClick={() => getTeams(selectedUnitId, selectedUnit, false, {...teamFilters, page: pagination.page - 1})}>Previous&lt;/button>
+                                &lt;span>Page {pagination.page} of {pagination.totalPages}&lt;/span>
+                                &lt;button className="abtn abtn-ghost" disabled={pagination.page >= pagination.totalPages}
+                                    onClick={() => getTeams(selectedUnitId, selectedUnit, false,  {...teamFilters, page: pagination.page + 1})}>Next&lt;/button>
+                            &lt;/div>
+                        &lt;/div>
+                    )}
+                &lt;/section>
+            &lt;/main>
+
+            &lt;style jsx global>{`
+                .anav { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid #30363D; background:#161B22; }
+                .anav-logo { font-size:20px; font-weight:700; color:#E6EDF3; display:flex; align-items:center; gap:10px; }
+                .anav-logo span { color:#00C9A7; }
+                .admin-tag { background:rgba(227,160,8,.15); color:#E3A008; border:1px solid rgba(227,160,8,.3); border-radius:6px; padding:2px 8px; font-size:12px; font-weight:600; }
+                .anav-link { color:#8B949E; text-decoration:none; font-size:14px; }
+                .anav-link:hover { color:#E6EDF3; }
+                .acontainer { max-width:1100px; margin:0 auto; padding:32px 24px; }
+                .apage-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; flex-wrap:wrap; gap:16px; }
+                .apage-title { font-size:26px; font-weight:700; margin-bottom:4px; color:#E6EDF3; }
+                .apage-sub { font-size:14px; color:#8B949E; }
+                .apage-section + .apage-section { margin-top:36px; }
+                .asection-header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:16px; }
+                .asection-title { margin:0 0 4px; font-size:18px; font-weight:650; color:#E6EDF3; }
+                .asection-sub { margin:0; font-size:13px; color:#8B949E; }
+                .aempty { text-align:center; padding:64px 24px; color:#8B949E; }
+                .aempty-panel { background:#161B22; border:1px solid #30363D; border-radius:12px; }
+                .aempty-compact { padding:36px 24px; }
+                .aempty-icon { font-size:48px; margin-bottom:12px; }
+                .aempty-text { font-size:16px; margin-bottom:8px; }
+                .aunits-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+                .aunit-card { background:#161B22; border:1px solid #30363D; border-radius:12px; padding:22px; display:flex; flex-direction:column; gap:8px; }
+                .aunit-code { font-size:22px; font-weight:700; color:#1D6FE8; font-family:monospace; }
+                .aunit-name { font-size:15px; font-weight:500; color:#E6EDF3; }
+                .aunit-semester { font-size:13px; color:#8B949E; }
+                .aconstraints-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+                .aconstraint-tag { background:rgba(0,201,167,.1); border:1px solid rgba(0,201,167,.25); color:#00C9A7; border-radius:6px; padding:3px 10px; font-size:12px; }
+                .aunit-stats { display:flex; gap:16px; font-size:13px; color:#8B949E; margin-top:4px; }
+                .aunit-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+                .agroups-scroll { width:100%; overflow-x:auto; border:1px solid #30363D; border-radius:12px; background:#161B22; }
+                .agroup-filters { display:flex; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:16px; }
+                .agroup-filters label { display:flex; flex-direction:column; gap:6px; color:#8B949E; font-size:12px; }
+                .agroup-filters select { min-height:38px; padding:8px 12px; background:#161B22; color:#E6EDF3; border:1px solid #30363D; border-radius:8px; font-size:14px; }
+                .agroup-filters select:focus-visible { outline:2px solid #1D6FE8; }
+                .agroup-filters select:disabled { opacity:.6; }
+                .agroup-pagination, .agroup-page-buttons { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+                .agroup-pagination { margin-top:16px; color:#8B949E; font-size:13px; }
+                .agroups-table { width:100%; min-width:680px; border-collapse:collapse; text-align:left; font-size:14px; }
+                .agroups-table th, .agroups-table td { padding:12px 16px; border-bottom:1px solid #30363D; vertical-align:middle; }
+                .agroups-table thead th { background:#1C2128; color:#8B949E; font-size:12px; font-weight:600; }
+                .agroups-table tbody th { width:32%; font-weight:400; }
+                .agroups-table .abtn { white-space:nowrap; }
+                .agroups-scroll:focus-visible, .agroups-table button:focus-visible { outline:2px solid #1D6FE8; outline-offset:-2px; }
+                .adata-name { color:#E6EDF3; font-size:14px; font-weight:650; overflow-wrap:anywhere; }
+                .adata-id { color:#8B949E; font-family:monospace; font-size:12px; margin-top:2px; }
+                .agroups-table .agroup-details { padding:16px; background:#0D1117; color:#8B949E; font-size:13px; }
+                .agroup-creator { margin-bottom:12px; }
+                .agroup-details strong { color:#E6EDF3; font-weight:500; }
+                .amember-list { list-style:none; }
+                .amember-list li { display:grid; grid-template-columns:1.5fr 1.4fr 1.4fr 1fr; gap:16px; padding:8px 0; overflow-wrap:anywhere; }
+                .amember-list li + li { border-top:1px solid #30363D; }
+                .astatus { flex-shrink:0; padding:4px 9px; border-radius:999px; background:rgba(139,148,158,.12); border:1px solid rgba(139,148,158,.3); color:#8B949E; font-size:11px; font-weight:700; text-transform:capitalize; }
+                .astatus-locked { background:rgba(248,81,73,.12); border-color:rgba(248,81,73,.3); color:#F85149; }
+                .astatus-forming { background:rgba(0,201,167,.1); border-color:rgba(0,201,167,.3); color:#00C9A7; }
+                @media (max-width:640px) {
+                    .anav { padding:12px 16px; gap:12px; flex-wrap:wrap; }
+                    .acontainer { padding:24px 16px; }
+                    .aunits-grid { grid-template-columns:1fr; }
+                }
+            `}&lt;/style>
+        &lt;/>
+    )
+
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

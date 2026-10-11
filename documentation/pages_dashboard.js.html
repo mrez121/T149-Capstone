@@ -30,6 +30,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { Copy } from 'lucide-react';
 
 /**
  * @default Dashboard
@@ -41,27 +42,30 @@ export default function Dashboard() {
   /**
    * Constants related to page navigation and states.
    * @constant Router:        Navigate to other pages
-   * @constant student:       (react state) Essentially the user's profile and information.
-   * @constant myGroup:       (react state) The group that the user is a part of
-   * @constant myMembers:     (react state) The other students that are in the user' group
-   * @constant mySlots:       (react state) The timeslots the user is available according to their database information
-   * @constant publicGroups:  (react state) The public groups that are available to browse
-   * @constant invites:       (react state) The invites from groups that have been sent to the user
-   * @constant groupType:     (react state) If a group is created by the user, it can be either public or private
-   * @constant inviteTarget:  (react state) The student that is being target by the user for an invite to the user's group
-   * @constant toast:         (react state) A reusable notification
-   * @constant loading:       (react state) A state that assists in page construction while data is being fetched.
+   * @constant student:             (react state) Essentially the user's profile and information.
+   * @constant myGroup:             (react state) The group that the user is a part of
+   * @constant myMembers:           (react state) The other students that are in the user' group
+   * @constant myGroupConstraints:  (react state) The constraints for the unit to be applied to the group
+   * @constant mySlots:             (react state) The timeslots the user is available according to their database information
+   * @constant publicGroups:        (react state) The public groups that are available to browse
+   * @constant invites:             (react state) The invites from groups that have been sent to the user
+   * @constant groupType:           (react state) If a group is created by the user, it can be either public or private
+   * @constant inviteTarget:        (react state) The student that is being target by the user for an invite to the user's group
+   * @constant toast:               (react state) A reusable notification
+   * @constant loading:             (react state) A state that assists in page construction while data is being fetched.
    */
   const router = useRouter();
   const [student, setStudent] = useState(null);
   const [myGroup, setMyGroup] = useState(null);
   const [myMembers, setMyMembers] = useState([]);
+  const [myGroupConstraints, setMyGroupConstraints] = useState([]);
   const [mySlots, setMySlots] = useState([]);
   const [publicGroups, setPublicGroups] = useState([]);
   const [invites, setInvites] = useState([]);
   const [groupType, setGroupType] = useState('public');
   const [inviteTarget, setInviteTarget] = useState('');
   const [toast, setToast] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
 
   /**
@@ -72,33 +76,55 @@ export default function Dashboard() {
    * loading state defines page construction at the end of this function call, ensuring that any updates to data are reflected in the user's view.
    */
   async function loadData() {
-    /**
-     * @const mineRes: The user's own/group information as received from the database
-     * @const pubRes:  The information about public groups that can be joined.
-     */
-    const [mineRes, pubRes] = await Promise.all([
-      fetch('/api/groups/mine'),
-      fetch('/api/groups'),
-    ]);
-    // Return to index page if there is an error retrieving user's information (such as it not existing)
-    if (mineRes.status === 401) {
-      router.push('/');
-      return;
-    }
-    /**
-     * @const mine: JSON form of mineRes to update various state values
-     * @const pub:  JSON form of pubRes to update publicGroup state value
-     */
-    const mine = await mineRes.json();
-    const pub = await pubRes.json();
+    setLoadError('');
 
-    setStudent(mine.student || null);
-    setMyGroup(mine.group || null);
-    setMyMembers(mine.members || []);
-    setMySlots(mine.slots || []);
-    setInvites(mine.invites || []);
-    setPublicGroups(pub.groups || []);
-    setLoading(false);
+    try {
+      /**
+       * @const mineRes: The user's own/group information as received from the database
+       * @const pubRes:  The information about public groups that can be joined.
+       */
+      const [mineRes, pubRes] = await Promise.all([
+        fetch('/api/groups/mine'),
+        fetch('/api/groups'),
+      ]);
+
+      // Return to the login page when the session is no longer valid.
+      if (mineRes.status === 401 || pubRes.status === 401) {
+        router.push('/');
+        return;
+      }
+
+      if (!mineRes.ok) {
+        throw new Error('Unable to load your student and group information. Please contact your unit coordinator to confirm your enrolment.');
+      }
+
+      const mine = await mineRes.json();
+      setStudent(mine.student || null);
+      setMyGroup(mine.group || null);
+      setMyMembers(mine.members || []);
+      setMyGroupConstraints(mine.groupConstraints || []);
+      setMySlots(mine.slots || []);
+      setInvites(mine.invites || []);
+
+      // Keep the dashboard usable when the public-groups API fails, including
+      // when the student has not yet been enrolled in a unit.
+      if (!pubRes.ok) {
+        setPublicGroups([]);
+        setLoadError(
+          'Public groups could not be loaded. Ask an administrator to confirm your unit enrolment.'
+        );
+        return;
+      }
+
+      const pub = await pubRes.json();
+      setPublicGroups(pub.groups || []);
+    } catch (error) {
+      setLoadError(
+        error.message || 'Dashboard data could not be loaded. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Update the page using loadData function
@@ -117,26 +143,64 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 4500);
   }
 
+  /**
+   * @function handleCopyTeamUpId
+   * @async
+   * Copy the current student's TeamUp ID so it can be shared for invitations.
+   */
+  async function handleCopyTeamUpId() {
+    if (!student?.teamupId) return;
+
+    try {
+      await navigator.clipboard.writeText(student.teamupId);
+      showToast('TeamUp ID copied. Share it with classmates who need to invite you.');
+    } catch {
+      showToast('Unable to copy the TeamUp ID. Select the ID and copy it manually.', 'error');
+    }
+  }
+
   
   /**
    * Live constraint checks used by both the status card and the active group panel.
    * @const memberCount:  How many members are in the group
    * @const newCount:     How many members of the group are new to QUT
-   * @const sizeOk:       Variable to check if memberCount is acceptable (either 4 or 5 students for IFB398/399)
-   * @const newOk:        Variable to check if newCount is accecptable (can only have up to 2 new students in IFB398/399)
+   * @const sizeOk:       Variable to check if memberCount is acceptable
+   * @const newOk:        Variable to check if newCount is accecptable
    * @const slotOk:       Variable to check if all members of the group have a shared availability slot
    * @const allOk:        Variable to check if every constraint has been met by the group
-   * @const seatsNeeded:  How many additional members are needed for the sizeOk variable to become valid (feedback variable for user)
    * @const openSeats:    How many spaces are available within the group up to the maximum group size for the unit (feedback variable for user)
    */
   const memberCount = myMembers.length;
   const newCount = myMembers.filter((m) => m.is_new).length;
-  const sizeOk = memberCount >= 4 &amp;&amp; memberCount &lt;= 5;
-  const newOk = newCount &lt;= 2;
-  const slotOk = !!myGroup?.shared_slot;
+  const maxSize = myGroupConstraints.max_size ?? null;
+  const maxNew = myGroupConstraints.max_new ?? null;
+  const hasConstraints = Number.isInteger(maxSize) &amp;&amp; maxSize > 0 &amp;&amp;
+    Number.isInteger(maxNew) &amp;&amp; maxNew >= 0;
+  const sizeOk = hasConstraints &amp;&amp; memberCount &lt;= maxSize;
+  const newOk = hasConstraints &amp;&amp; newCount &lt;= maxNew;
+  // A solo group shares its creator's availability. An empty array is not a match.
+  const sharedSlot = memberCount === 1 ? mySlots[0] || null : myGroup?.shared_slot || null;
+  const slotOk = Boolean(sharedSlot);
   const allOk = sizeOk &amp;&amp; newOk &amp;&amp; slotOk;
-  const seatsNeeded = Math.max(0, 4 - memberCount);
-  const openSeats = Math.max(0, 5 - memberCount);
+  const isLocked = myGroup?.status === 'locked';
+  const openSeats = hasConstraints ? Math.max(0, maxSize - memberCount) : 0;
+  const groupSizeLabel = `${memberCount} / max ${maxSize ?? '—'}`;
+  const capacityMessage = isLocked
+    ? 'Membership is locked.'
+    : !hasConstraints
+      ? 'Group limits unavailable.'
+      : !sizeOk
+        ? 'Group exceeds the member limit.'
+        : openSeats === 0
+          ? 'No places available.'
+          : `${openSeats} place${openSeats === 1 ? '' : 's'} available.`;
+  const lockingFeedback = !hasConstraints
+    ? 'Group limits could not be loaded. Refresh the page or contact your unit coordinator.'
+    : [
+        !sizeOk &amp;&amp; `Group exceeds the maximum of ${maxSize} members.`,
+        !newOk &amp;&amp; `Group exceeds the maximum of ${maxNew} new students.`,
+        !slotOk &amp;&amp; 'A shared tutorial time is required. Check member availability.',
+      ].filter(Boolean).join(' ');
 
   /**
    * @const isCreator: Check to see if current user is the creator of the group they are in.
@@ -215,7 +279,7 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         groupId: myGroup.group_id,
-        targetStudentId: inviteTarget,
+        targetTeamUpId: inviteTarget,
       }),
     });
 
@@ -229,7 +293,6 @@ export default function Dashboard() {
     }
   }
 
-  // Accept or decline an invitation shown in the pending invite banner.
   /**
    * @function handleRespondInvite
    * @async
@@ -277,7 +340,7 @@ export default function Dashboard() {
     const data = await res.json();
 
     if (res.ok) {
-      showToast('Group locked and confirmed valid!');
+      showToast('Group locked. Membership changes are now disabled.');
       loadData();
     } else {
       showToast(data.errors?.join(' ') || data.error, 'error');
@@ -388,6 +451,40 @@ export default function Dashboard() {
           Manage your availability, group and team requirements.
         &lt;/p>
 
+        {loadError &amp;&amp; (
+          &lt;div className="dashboard-error" role="alert">
+            {loadError}
+          &lt;/div>
+        )}
+
+        {student?.teamupId &amp;&amp; (
+          &lt;section className="teamup-id-panel" aria-labelledby="teamup-id-heading">
+            &lt;div className="teamup-id-copy">
+              &lt;span className="teamup-id-label" id="teamup-id-heading">
+                Your TeamUp ID
+              &lt;/span>
+
+              &lt;strong className="teamup-id-value">{student.teamupId}&lt;/strong>
+            &lt;/div>
+
+            &lt;p>
+              Share this ID with classmates so they can invite you to their group.
+              It is different from your student number.
+            &lt;/p>
+
+            &lt;button
+              className="btn btn-teal teamup-id-copy-button"
+              type="button"
+              onClick={handleCopyTeamUpId}
+              title="Copy TeamUp ID"
+              aria-label={`Copy TeamUp ID ${student.teamupId}`}
+            >
+              &lt;Copy size={16} aria-hidden="true" />
+              Copy ID
+            &lt;/button>
+          &lt;/section>
+        )}
+
         {/* Student Directory entry point for both grouped and ungrouped students. */}
         &lt;div className="directory-entry-card">
           &lt;div className="directory-entry-copy">
@@ -455,6 +552,14 @@ export default function Dashboard() {
               My Tutorial Slots
             &lt;/div>
 
+            &lt;button
+              type='button'
+              className='btn btn-blue'
+              onClick={() => router.push(`/students/${student.teamupId}/edit`)}
+              >
+                Edit Availability &amp; Profile
+              &lt;/button>
+
             &lt;div className="slot-list">
               {mySlots.length ? (
                 mySlots.map((slot) => (
@@ -492,11 +597,11 @@ export default function Dashboard() {
                   }`}
                 >
                   &lt;span>
-                    {sizeOk ? '✅' : '❌'} Team size
+                    {sizeOk ? '✅' : '❌'} Group size
                   &lt;/span>
 
                   &lt;span className="cv">
-                    {memberCount} / 4–5 members
+                    {groupSizeLabel}
                   &lt;/span>
                 &lt;/div>
 
@@ -510,7 +615,7 @@ export default function Dashboard() {
                   &lt;/span>
 
                   &lt;span className="cv">
-                    {newCount} / max 2
+                    {newCount} / max {maxNew ?? '—'}
                   &lt;/span>
                 &lt;/div>
 
@@ -524,7 +629,7 @@ export default function Dashboard() {
                   &lt;/span>
 
                   &lt;span className="cv">
-                    {myGroup.shared_slot || 'Not found yet'}
+                    {sharedSlot || 'No shared time'}
                   &lt;/span>
                 &lt;/div>
 
@@ -535,28 +640,27 @@ export default function Dashboard() {
                     &lt;/div>
                   ) : (
                     &lt;div className="not-ok">
-                      Invite more members to meet all
-                      constraints.
+                      {lockingFeedback}
                     &lt;/div>
                   ))}
 
                 {myGroup.status === 'locked' &amp;&amp; (
                   &lt;div className="all-ok">
-                    🔒 Group locked and confirmed valid.
+                    🔒 Group locked. Membership changes are disabled.
                   &lt;/div>
                 )}
               &lt;/>
             ) : (
               &lt;>
                 &lt;div className="constraint-row c-info">
-                  &lt;span>👥 Team size&lt;/span>
-                  &lt;span className="cv">4–5 members&lt;/span>
+                  &lt;span>👥 Group size&lt;/span>
+                  &lt;span className="cv">Max {maxSize ?? '—'} members&lt;/span>
                 &lt;/div>
 
                 &lt;div className="constraint-row c-info">
                   &lt;span>🎓 New students&lt;/span>
                   &lt;span className="cv">
-                    Max 2 per group
+                    Max {maxNew ?? '—'} per group
                   &lt;/span>
                 &lt;/div>
 
@@ -594,7 +698,7 @@ export default function Dashboard() {
                   &lt;div className="active-group-hero">
                     &lt;div>
                       &lt;div className="group-kicker">
-                        Current team
+                        Current group
                       &lt;/div>
                       
                       &lt;div className="group-name active-group-name">
@@ -624,19 +728,15 @@ export default function Dashboard() {
 
                     &lt;div
                       className={`group-health-pill ${
-                        allOk ? 'ready' : 'needs-work'
+                        isLocked || allOk ? 'ready' : 'needs-work'
                       }`}
                     >
                       &lt;strong>
-                        {allOk ? 'Ready to lock' : 'Building team'}
+                        {isLocked ? 'Group locked' : allOk ? 'Ready to lock' : 'Cannot lock yet'}
                       &lt;/strong>
 
                       &lt;span>
-                        {seatsNeeded > 0
-                          ? `${seatsNeeded} more needed`
-                          : `${openSeats} open seat${
-                              openSeats === 1 ? '' : 's'
-                            }`}
+                        {capacityMessage}
                       &lt;/span>
                     &lt;/div>
                   &lt;/div>
@@ -647,8 +747,8 @@ export default function Dashboard() {
                         sizeOk ? 'metric-ok' : 'metric-warn'
                       }`}
                     >
-                      &lt;span>Team size&lt;/span>
-                      &lt;strong>{memberCount}/5&lt;/strong>
+                      &lt;span>Group size&lt;/span>
+                      &lt;strong>{groupSizeLabel}&lt;/strong>
                     &lt;/div>
 
                     &lt;div
@@ -657,7 +757,7 @@ export default function Dashboard() {
                       }`}
                     >
                       &lt;span>New students&lt;/span>
-                      &lt;strong>{newCount}/2&lt;/strong>
+                      &lt;strong>{newCount} / max {maxNew ?? '—'}&lt;/strong>
                     &lt;/div>
 
                     &lt;div
@@ -667,7 +767,7 @@ export default function Dashboard() {
                     >
                       &lt;span>Shared slot&lt;/span>
                       &lt;strong>
-                        {myGroup.shared_slot || 'Missing'}
+                        {sharedSlot || 'No shared time'}
                       &lt;/strong>
                     &lt;/div>
                   &lt;/div>
@@ -675,18 +775,16 @@ export default function Dashboard() {
                   &lt;div className="active-members-heading">
                     &lt;div>
                       &lt;div className="section-label members-label">
-                        Team seats
+                        Group members
                       &lt;/div>
 
                       &lt;p>
-                        {memberCount} member{memberCount === 1 ? '' : 's'}
-                        joined, {openSeats} seat
-                        {openSeats === 1 ? '' : 's'} still open.
+                        {memberCount} member{memberCount === 1 ? '' : 's'} joined. {capacityMessage}
                       &lt;/p>
                     &lt;/div>
 
                     &lt;span className="group-seat-count">
-                      {memberCount}/5 filled
+                      {groupSizeLabel}
                     &lt;/span>
                   &lt;/div>
 
@@ -706,7 +804,7 @@ export default function Dashboard() {
                           &lt;/div>
 
                           &lt;div className="member-id">
-                            {member.student_id}
+                            {member.teamup_id}
                           &lt;/div>
                         &lt;/div>
 
@@ -722,12 +820,15 @@ export default function Dashboard() {
                       &lt;/div>
                     ))}
 
-                    {/* Empty seat cards make the remaining group capacity visible at a glance. */}
-                    {Array.from({ length: openSeats }).map(
+                    {/* Empty places provide a direct, accessible route to the directory. */}
+                    {!isLocked &amp;&amp; Array.from({ length: openSeats }).map(
                       (_, index) => (
-                        &lt;div
+                        &lt;button
                           key={`open-seat-${index}`}
+                          type="button"
                           className="member-card active-member-card empty-seat-card"
+                          onClick={() => router.push('/students')}
+                          aria-label={`Browse the Student Directory for available place ${memberCount + index + 1}`}
                         >
                           &lt;div className="avatar empty-seat-avatar">
                             +
@@ -735,7 +836,7 @@ export default function Dashboard() {
 
                           &lt;div className="member-info">
                             &lt;div className="member-name">
-                              Open seat
+                              Available place
                             &lt;/div>
 
                             &lt;div className="member-id">
@@ -746,7 +847,7 @@ export default function Dashboard() {
                           &lt;span className="badge badge-blue">
                             Slot {memberCount + index + 1}
                           &lt;/span>
-                        &lt;/div>
+                        &lt;/button>
                       )
                     )}
                   &lt;/div>
@@ -765,8 +866,8 @@ export default function Dashboard() {
                           sizeOk ? 'complete' : 'attention'
                         }`}
                       >
-                        &lt;span>Team size&lt;/span>
-                        &lt;strong>{memberCount}/4 minimum&lt;/strong>
+                        &lt;span>Group size&lt;/span>
+                        &lt;strong>{groupSizeLabel}&lt;/strong>
                       &lt;/div>
 
                       &lt;div
@@ -775,7 +876,7 @@ export default function Dashboard() {
                         }`}
                       >
                         &lt;span>New-student limit&lt;/span>
-                        &lt;strong>{newCount}/2 used&lt;/strong>
+                        &lt;strong>{newCount} / max {maxNew ?? '—'} new students&lt;/strong>
                       &lt;/div>
 
                       &lt;div
@@ -785,7 +886,7 @@ export default function Dashboard() {
                       >
                         &lt;span>Shared tutorial&lt;/span>
                         &lt;strong>
-                          {myGroup.shared_slot || 'Not matched'}
+                          {sharedSlot || 'No shared time'}
                         &lt;/strong>
                       &lt;/div>
                     &lt;/div>
@@ -794,7 +895,7 @@ export default function Dashboard() {
                     myGroup.status === 'forming' ? (
                       &lt;>
                         &lt;p className="action-help">
-                          Invite classmates by student ID, or browse
+                          Invite classmates by TeamUp ID, or browse
                           the directory to find available teammates.
                         &lt;/p>
 
@@ -802,15 +903,25 @@ export default function Dashboard() {
                           onSubmit={handleInviteStudent}
                           className="invite-section active-invite-section"
                         >
+                          &lt;label className="invite-id-label" htmlFor="invite-teamup-id">
+                            Classmate TeamUp ID
+                          &lt;/label>
+
                           &lt;input
+                            id="invite-teamup-id"
                             className="text-input"
-                            placeholder="Student ID e.g. n10000003"
+                            placeholder="TeamUp ID e.g. TU-123456"
                             value={inviteTarget}
                             onChange={(e) =>
                               setInviteTarget(e.target.value)
                             }
                             required
                           />
+
+                          &lt;p className="invite-id-help">
+                            Enter their TeamUp ID (TU-XXXXXX), not their student number.
+                            They can copy it from their Dashboard.
+                          &lt;/p>
 
                           &lt;button
                             className="btn btn-blue"
@@ -823,7 +934,7 @@ export default function Dashboard() {
                     ) : (
                       &lt;p className="action-help">
                         {myGroup.status === 'locked'
-                          ? 'This group is locked and confirmed.'
+                          ? 'Your unit coordinator must unlock this group before members can join or leave.'
                           : 'Only the group creator can send invitations.'}
                       &lt;/p>
                     )}
@@ -941,7 +1052,7 @@ export default function Dashboard() {
                   &lt;div className="create-group-footer">
                     &lt;p className="form-help">
                       Once created, invite teammates by their
-                      student ID from your group panel.
+                      TeamUp ID from your group panel.
                     &lt;/p>
 
                     &lt;button
@@ -999,22 +1110,22 @@ export default function Dashboard() {
 
                         &lt;span
                           className={
-                            group.member_count >= 4
+                            group.member_count >= maxSize
                               ? 'warn'
                               : 'ok'
                           }
                         >
-                          👥 {group.member_count}/5 members
+                          👥 {group.member_count} / max {maxSize ?? '—'} members
                         &lt;/span>
 
                         &lt;span
                           className={
-                            group.new_count >= 2
+                            group.new_count >= myGroupConstraints.max_new
                               ? 'warn'
                               : 'ok'
                           }
                         >
-                          🎓 {group.new_count}/2 new
+                          🎓 {group.new_count}/{myGroupConstraints.max_new} new
                         &lt;/span>
 
                         {group.shared_slot &amp;&amp; (
@@ -1053,13 +1164,13 @@ export default function Dashboard() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#StudentDirectoryBuildsTeamUp'sstudentdirectorypageusingreact.js">StudentDirectoryBuilds TeamUp's student directory page using react.js</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#c">c</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#error">error</a></li><li><a href="global.html#existingInvite">existingInvite</a></li><li><a href="global.html#filterOptions">filterOptions</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleViewProfileOpentheprofilepagefortheselectedstudent.">handleViewProfileOpen the profile page for the selected student.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraintsDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraintsDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#inviteRows">inviteRows</a></li><li><a href="global.html#invitingId">invitingId</a></li><li><a href="global.html#isCreator">isCreator</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#newStudents">newStudents</a></li><li><a href="global.html#normalizedQuery">normalizedQuery</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pub:">pub:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#shared">shared</a></li><li><a href="global.html#sharedSlots">sharedSlots</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowashortfeedbackmessageafterinviteactionsorAPIerrors.">showToastShow a short feedback message after invite actions or API errors.</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#students">students</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#token">token</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Aug 23 2026 20:43:17 GMT+1000 (Australian Eastern Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>

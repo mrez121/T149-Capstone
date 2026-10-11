@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: pages/admin/units/csv-upload.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: pages/admin/units/csv-upload.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// pages/admin/units/csv-upload.js
+// CSV bulk enrolment page — admin selects a unit and uploads a CSV of student IDs
+
+import { useState, useEffect } from 'react';
+import { useRouter }           from 'next/router';
+import Head                    from 'next/head';
+import Link                    from 'next/link';
+
+/**
+ * @function CsvUploadPage
+ * Builds the CSV upload page using React.js
+ * @returns CSV Upload Page HTML
+ */
+export default function CsvUploadPage() {
+  const router = useRouter();
+
+  // State for units list, selected unit and CSV file
+  const [units,      setUnits]      = useState([]);
+  const [unitCode,   setUnitCode]   = useState('');
+  const [csvText,    setCsvText]    = useState('');
+  const [fileName,   setFileName]   = useState('');
+  const [loading,    setLoading]    = useState(false);
+  const [results,    setResults]    = useState(null);
+  const [error,      setError]      = useState('');
+
+  // Load all units on page load so admin can select one
+  useEffect(() => {
+    fetch('/api/admin/units')
+      .then(r => r.json())
+      .then(data => {
+        setUnits(data.units || []);
+        if (data.units?.length > 0) setUnitCode(data.units[0].unit_code);
+      });
+  }, []);
+
+  
+  /**
+   * @function handleFileChange
+   * Reads the CSV file and stores its text content
+   * @param {*} e - a react event
+   */
+  function handleFileChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    setResults(null);
+    setError('');
+
+    const reader = new FileReader();
+    reader.onload = (evt) => setCsvText(evt.target.result);
+    reader.readAsText(file);
+  }
+
+  /**
+   * @function handleSubmit
+   * @async
+   * Submit the CSV file to the API for bulk enrolment into a unit
+   * @param {*} e - a react event 
+   */
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!csvText) { setError('Please select a CSV file.'); return; }
+    if (!unitCode) { setError('Please select a unit.'); return; }
+
+    setLoading(true);
+    setError('');
+    setResults(null);
+
+    const res  = await fetch('/api/admin/units/csv-enrol', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ unitCode, csvText }),
+    });
+    const data = await res.json();
+    setLoading(false);
+
+    if (res.ok) {
+      setResults(data);
+    } else {
+      setError(data.error || 'Upload failed.');
+    }
+  }
+
+  return (
+    &lt;>
+      &lt;Head>&lt;title>TeamUp — CSV Enrolment Upload&lt;/title>&lt;/Head>
+
+      {/* Navigation */}
+      &lt;nav className="anav">
+        &lt;div className="anav-logo">Team&lt;span>Up&lt;/span> &lt;span className="admin-tag">Admin&lt;/span>&lt;/div>
+        &lt;Link href="/admin/units/enrolments" className="anav-link anav-button">← Back to enrolments&lt;/Link>
+      &lt;/nav>
+
+      &lt;div className="acontainer-sm">
+        &lt;h1 className="apage-title">CSV Bulk Enrolment&lt;/h1>
+        &lt;p className="apage-sub">Upload a CSV file to enrol multiple students into a unit at once.&lt;/p>
+
+        &lt;form onSubmit={handleSubmit} className="aform-card">
+
+          {error &amp;&amp; &lt;div className="aerror-box">{error}&lt;/div>}
+
+          {/* Unit selection */}
+          &lt;div className="asection-label">Select Unit&lt;/div>
+          &lt;div className="afield">
+            &lt;label>Unit&lt;/label>
+            &lt;select
+              value={unitCode}
+              onChange={e => setUnitCode(e.target.value)}
+              required
+            >
+              {units.map(u => (
+                &lt;option key={u.unit_code} value={u.unit_code}>
+                  {u.unit_code} — {u.unit_name}
+                &lt;/option>
+              ))}
+            &lt;/select>
+          &lt;/div>
+
+          &lt;div className="adivider" />
+
+          {/* CSV upload */}
+          &lt;div className="asection-label">Upload CSV File&lt;/div>
+          &lt;p className="asection-desc">
+            The CSV file should have one student ID per line. The first line can be a header called &lt;strong>student_id&lt;/strong>.
+          &lt;/p>
+
+          {/* CSV format example */}
+          &lt;div className="csv-example">
+            &lt;div className="csv-example-label">Expected format&lt;/div>
+            &lt;pre className="csv-preview">
+{`student_id
+n10000001
+n10000002
+n10000003`}
+            &lt;/pre>
+          &lt;/div>
+
+          &lt;div className="afield">
+            &lt;label>CSV File&lt;/label>
+            &lt;div className="file-upload-area">
+              &lt;input
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+                id="csv-file"
+                style={{ display: 'none' }}
+              />
+              &lt;label htmlFor="csv-file" className="abtn abtn-ghost" style={{ cursor: 'pointer' }}>
+                📂 Choose CSV file
+              &lt;/label>
+              {fileName &amp;&amp; &lt;span className="file-name">✓ {fileName}&lt;/span>}
+            &lt;/div>
+          &lt;/div>
+
+          &lt;div className="abtn-row">
+            &lt;button className="abtn abtn-blue" type="submit" disabled={loading || !csvText}>
+              {loading ? 'Uploading...' : 'Upload and enrol'}
+            &lt;/button>
+            &lt;Link href="/admin/units/enrolments" className="abtn abtn-ghost">Cancel&lt;/Link>
+          &lt;/div>
+        &lt;/form>
+
+        {/* Results panel */}
+        {results &amp;&amp; (
+          &lt;div className="results-card">
+            &lt;div className="results-title">Upload Complete — {results.unitCode}&lt;/div>
+
+            {/* Summary counts */}
+            &lt;div className="results-summary">
+              &lt;div className="result-stat stat-green">
+                &lt;div className="stat-num">{results.summary.enrolled}&lt;/div>
+                &lt;div className="stat-label">Enrolled&lt;/div>
+              &lt;/div>
+              &lt;div className="result-stat stat-amber">
+                &lt;div className="stat-num">{results.summary.skipped}&lt;/div>
+                &lt;div className="stat-label">Already enrolled&lt;/div>
+              &lt;/div>
+              &lt;div className="result-stat stat-red">
+                &lt;div className="stat-num">{results.summary.notFound}&lt;/div>
+                &lt;div className="stat-label">Not found&lt;/div>
+              &lt;/div>
+              &lt;div className="result-stat stat-gray">
+                &lt;div className="stat-num">{results.summary.total}&lt;/div>
+                &lt;div className="stat-label">Total in CSV&lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            {/* Not found list */}
+            {results.results.notFound.length > 0 &amp;&amp; (
+              &lt;div className="result-section">
+                &lt;div className="result-section-title">❌ Student IDs not found in the system&lt;/div>
+                &lt;div className="result-list">
+                  {results.results.notFound.map(id => (
+                    &lt;span key={id} className="result-tag tag-red">{id}&lt;/span>
+                  ))}
+                &lt;/div>
+              &lt;/div>
+            )}
+
+            {/* Skipped list */}
+            {results.results.skipped.length > 0 &amp;&amp; (
+              &lt;div className="result-section">
+                &lt;div className="result-section-title">⚠️ Already enrolled — skipped&lt;/div>
+                &lt;div className="result-list">
+                  {results.results.skipped.map(id => (
+                    &lt;span key={id} className="result-tag tag-amber">{id}&lt;/span>
+                  ))}
+                &lt;/div>
+              &lt;/div>
+            )}
+
+            {/* Enrolled list */}
+            {results.results.enrolled.length > 0 &amp;&amp; (
+              &lt;div className="result-section">
+                &lt;div className="result-section-title">✅ Successfully enrolled&lt;/div>
+                &lt;div className="result-list">
+                  {results.results.enrolled.map(id => (
+                    &lt;span key={id} className="result-tag tag-green">{id}&lt;/span>
+                  ))}
+                &lt;/div>
+              &lt;/div>
+            )}
+          &lt;/div>
+        )}
+      &lt;/div>
+
+      &lt;style jsx>{`
+        .anav { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid #30363D; background:#161B22; }
+        .anav-logo { font-size:20px; font-weight:700; color:#E6EDF3; display:flex; align-items:center; gap:10px; }
+        .anav-logo span { color:#00C9A7; }
+        .admin-tag { background:rgba(227,160,8,.15); color:#E3A008; border:1px solid rgba(227,160,8,.3); border-radius:6px; padding:2px 8px; font-size:12px; font-weight:600; }
+        .anav-link { color:#8B949E; text-decoration:none; font-size:14px; }
+        .anav-link:hover { color:#E6EDF3; }
+        .acontainer-sm { max-width:680px; margin:0 auto; padding:32px 24px; }
+        .apage-title { font-size:26px; font-weight:700; margin-bottom:4px; color:#E6EDF3; }
+        .apage-sub { font-size:14px; color:#8B949E; margin-bottom:28px; }
+        .aform-card { background:#161B22; border:1px solid #30363D; border-radius:12px; padding:28px; margin-bottom:24px; }
+        .aerror-box { background:rgba(248,81,73,.12); border:1px solid rgba(248,81,73,.3); border-radius:8px; padding:12px 14px; font-size:14px; color:#F85149; margin-bottom:20px; }
+        .asection-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#8B949E; margin-bottom:16px; }
+        .asection-desc { font-size:13px; color:#8B949E; margin-top:-10px; margin-bottom:16px; line-height:1.6; }
+        .asection-desc strong { color:#E6EDF3; }
+        .afield { display:flex; flex-direction:column; gap:6px; margin-bottom:18px; }
+        .afield label { font-size:13px; font-weight:500; color:#C9D1D9; }
+        .afield select { background:#0D1117; border:1px solid #30363D; border-radius:8px; padding:10px 12px; font-size:14px; color:#E6EDF3; outline:none; }
+        .afield select:focus { border-color:#1D6FE8; }
+        .adivider { border:none; border-top:1px solid #30363D; margin:24px 0; }
+        .csv-example { background:#0D1117; border:1px solid #30363D; border-radius:8px; padding:14px 16px; margin-bottom:18px; }
+        .csv-example-label { font-size:12px; color:#8B949E; margin-bottom:8px; }
+        .csv-preview { font-family:monospace; font-size:13px; color:#00C9A7; line-height:1.6; }
+        .file-upload-area { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .file-name { font-size:13px; color:#3FB950; font-family:monospace; }
+        .abtn-row { display:flex; gap:12px; align-items:center; margin-top:8px; }
+        .abtn { padding:10px 20px; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; text-decoration:none; display:inline-block; }
+        .abtn-blue { background:#1D6FE8; color:white; }
+        .abtn-blue:hover:not(:disabled) { background:#1353B0; }
+        .abtn-blue:disabled { opacity:.6; cursor:not-allowed; }
+        .abtn-ghost { background:none; color:#8B949E; border:1px solid #30363D; }
+        .abtn-ghost:hover { color:#E6EDF3; border-color:#8B949E; }
+        .results-card { background:#161B22; border:1px solid #30363D; border-radius:12px; padding:24px; }
+        .results-title { font-size:16px; font-weight:600; color:#E6EDF3; margin-bottom:20px; }
+        .results-summary { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:24px; }
+        .result-stat { border-radius:8px; padding:14px; text-align:center; }
+        .stat-green { background:rgba(63,185,80,.1);  border:1px solid rgba(63,185,80,.25); }
+        .stat-amber { background:rgba(227,160,8,.1);  border:1px solid rgba(227,160,8,.25); }
+        .stat-red   { background:rgba(248,81,73,.1);  border:1px solid rgba(248,81,73,.25); }
+        .stat-gray  { background:#1C2128; border:1px solid #30363D; }
+        .stat-num { font-size:28px; font-weight:700; color:#E6EDF3; }
+        .stat-label { font-size:12px; color:#8B949E; margin-top:4px; }
+        .result-section { margin-bottom:16px; }
+        .result-section-title { font-size:13px; font-weight:500; color:#8B949E; margin-bottom:8px; }
+        .result-list { display:flex; flex-wrap:wrap; gap:6px; }
+        .result-tag { padding:3px 10px; border-radius:6px; font-size:12px; font-family:monospace; }
+        .tag-green { background:rgba(63,185,80,.1);  color:#3FB950; border:1px solid rgba(63,185,80,.25); }
+        .tag-amber { background:rgba(227,160,8,.1);  color:#E3A008; border:1px solid rgba(227,160,8,.25); }
+        .tag-red   { background:rgba(248,81,73,.1);  color:#F85149; border:1px solid rgba(248,81,73,.25); }
+      `}&lt;/style>
+    &lt;/>
+  );
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

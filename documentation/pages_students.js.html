@@ -26,512 +26,333 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>// pages/students.js
-import { useEffect, useMemo, useState } from 'react';
+            <pre class="prettyprint source linenums"><code>import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
+import {
+  ArrowLeft, ArrowRight, CalendarDays, Check, ChevronLeft, ChevronRight,
+  ChevronsLeft, ChevronsRight, CircleAlert, LoaderCircle, LogOut, RotateCcw,
+  Search, UserRound, UserRoundPlus, UsersRound, X,
+} from 'lucide-react';
+import styles from '../styles/StudentDirectory.module.css';
 
-/**
- * @const filterOptions
- * Keeps the directory filter values and labels in one shared place so the 
- * toolbar and filter logic stay consistent
- */
-const filterOptions = [
-  { value: 'all', label: 'All students' },
-  { value: 'available', label: 'Available' },
-  { value: 'in-group', label: 'In a group' },
-  { value: 'new', label: 'New students' },
-  { value: 'returning', label: 'Returning' },
-];
+const INITIAL_FILTERS = {
+  q: '', status: 'all', experience: 'all', cohort: '', slot: '', sort: 'name-asc', page: 1, pageSize: 25,
+};
 
 /**
  * @function StudentDirectory
- * Builds TeamUp's student directory page using react.js
- * @returns Student Directory HTML (if loading state = false) || loading html (if loading state = true)
+ * Displays a server-paginated directory and keeps invitation actions tied to the current group.
+ * @returns Student Directory HTML
  */
 export default function StudentDirectory() {
-  /**
-   * @const router
-   * @const student
-   * @const students
-   * @const myGroup
-   * @const query
-   * @const filter
-   * @const toast
-   * @const loading
-   * @const invitingId
-   */
   const router = useRouter();
-  const [student, setStudent] = useState(null);
-  const [students, setStudents] = useState([]);
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [search, setSearch] = useState('');
+  const [result, setResult] = useState(null);
   const [myGroup, setMyGroup] = useState(null);
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [toast, setToast] = useState(null);
+  const [groupError, setGroupError] = useState('');
+  const [groupLoading, setGroupLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [refresh, setRefresh] = useState(0);
+  const [toast, setToast] = useState(null);
   const [invitingId, setInvitingId] = useState(null);
+  const [invited, setInvited] = useState([]);
+  const [pageInput, setPageInput] = useState('1');
+  const [expandedSlots, setExpandedSlots] = useState([]);
+  const toastTimer = useRef(null);
+  const inviteLock = useRef(false);
+  const requestKey = new URLSearchParams(filters).toString();
 
-  // Load the current student, the full directory, and the user's group state.
-  // Both directory and group data are needed before invite buttons can be shown safely.
-  /**
-   * @function loadData
-   * @async
-   * Load the current student, the full directory, and the user's group state.
-   * Both directory and group data are needed before invite buttons can be shown safely.
-   * 
-   */
-  async function loadData() {
-    const [directoryRes, mineRes] = await Promise.all([
-      fetch('/api/students'),
-      fetch('/api/groups/mine'),
-    ]);
-
-    if (directoryRes.status === 401 || mineRes.status === 401) {
-      router.push('/');
-      return;
-    }
-
-    const directoryData = await directoryRes.json();
-    const mineData = await mineRes.json();
-
-    setStudent(directoryData.student || null);
-    setStudents(directoryData.students || []);
-    setMyGroup(mineData.group || null);
-    setLoading(false);
-  }
+  // Debounce typing; the server searches all matching students, not only this page.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((current) => current.q === search.trim() ? current : { ...current, q: search.trim(), page: 1 });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const controller = new AbortController();
+    async function loadDirectory() {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await fetch('/api/students?' + requestKey, { signal: controller.signal });
+        if (response.status === 401) { router.replace('/'); return; }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Unable to load the student directory.');
+        if (controller.signal.aborted) return;
+        setResult({ ...data, requestKey });
+        setPageInput(String(data.pagination.page));
+        setExpandedSlots([]);
+      } catch (err) {
+        if (!controller.signal.aborted) setError(err.message || 'Unable to load the student directory.');
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    loadDirectory();
+    return () => controller.abort();
+  }, [requestKey, refresh, router]);
+
+  const studentId = result?.student?.studentId;
+  useEffect(() => {
+    if (!studentId) return;
+    const controller = new AbortController();
+    async function loadGroup() {
+      setGroupLoading(true);
+      setGroupError('');
+      try {
+        const response = await fetch('/api/groups/mine', { signal: controller.signal });
+        if (response.status === 401) { router.replace('/'); return; }
+        const data = await response.json();
+        if (!response.ok) throw new Error('Group information is unavailable. Invitations are temporarily unavailable.');
+        if (!controller.signal.aborted) setMyGroup(data.group || null);
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setMyGroup(null);
+          setGroupError('Group information is unavailable. Invitations are temporarily unavailable.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setGroupLoading(false);
+      }
+    }
+    loadGroup();
+    return () => controller.abort();
+  }, [studentId, refresh, router]);
+
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  /**
+   * @function changeFilter
+   * Reset the page whenever a filter or page size changes, so results cannot appear falsely empty
+   * @param {*} key - the filter key
+   * @param {*} value - the filter value
+   */
+  function changeFilter(key, value) {
+    setFilters((current) => ({ ...current, [key]: value, page: 1 }));
+  }
+
+  /**
+   * @function clearFilters
+   * Reset the filters on the page to their default values.
+   */
+  function clearFilters() {
+    setSearch('');
+    setFilters((current) => ({ ...INITIAL_FILTERS, pageSize: current.pageSize, sort: current.sort }));
+  }
 
   /**
    * @function showToast
-   * Show a short feedback message after invite actions or API errors.
-   * @param {*} msg 
-   * @param {*} type 
+   * Show a temporary notification
+   * @param {*} message - the message to be displayed
+   * @param {*} type - the type of message to be displayed
    */
-  function showToast(msg, type = 'success') {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4500);
+  function showToast(message, type = 'success') {
+    clearTimeout(toastTimer.current);
+    setToast({ message, type });
+    toastTimer.current = setTimeout(() => setToast(null), 4500);
   }
 
   /**
    * @function handleLogout
    * @async
-   * End the current session and return the user to the login page.
+   * Sign the user out of TeamUp and return them to the login page
    */
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/');
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      if (!response.ok) throw new Error();
+      router.push('/');
+    } catch {
+      showToast('Unable to sign out. Please try again.', 'error');
+    }
   }
 
-  /**
-   * @function handleViewProfile
-   * Open the profile page for the selected student.
-   * @param {*} targetStudentId 
-   */
-  function handleViewProfile(targetStudentId) {
-    router.push(`/students/${targetStudentId}`);
-  }
+  const student = result?.student;
+  const isCreator = Boolean(myGroup &amp;&amp; student &amp;&amp;
+    myGroup.created_by === student.studentId &amp;&amp; myGroup.status === 'forming');
 
   /**
    * @function handleInvite
    * @async
-   * Send an invite from the creator's current group to an available student.
-   * @param {*} targetStudentId 
-   * @returns 
+   * Send a group invite to the target student.
+   * Preserve the existing invite API and prevent duplicate submissions while a request is pending.
+   * @param {*} targetTeamUpId - the TeamUp ID of the student being invited.
    */
-  async function handleInvite(targetStudentId) {
-    if (!myGroup) return;
-
-    setInvitingId(targetStudentId);
-
-    const res = await fetch('/api/groups/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        groupId: myGroup.group_id,
-        targetStudentId,
-      }),
-    });
-
-    const data = await res.json();
-    setInvitingId(null);
-
-    if (res.ok) {
+  async function handleInvite(targetTeamUpId) {
+    if (!isCreator || inviteLock.current) return;
+    inviteLock.current = true;
+    setInvitingId(targetTeamUpId);
+    try {
+      const response = await fetch('/api/groups/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: myGroup.group_id, targetTeamUpId }),
+      });
+      if (response.status === 401) { router.replace('/'); return; }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.errors?.join(' ') || data.error || 'Unable to send invite.');
+      setInvited((current) => [...current, targetTeamUpId]);
       showToast(data.message || 'Invite sent.');
-    } else {
-      showToast(data.errors?.join(' ') || data.error, 'error');
+    } catch (err) {
+      showToast(err.message || 'Unable to send invite. Please try again.', 'error');
+    } finally {
+      inviteLock.current = false;
+      setInvitingId(null);
     }
   }
 
-  /**
-   * @const isCreator - only the creator of a forming group can invite students from the directory
-   */
-  const isCreator =
-    myGroup &amp;&amp;
-    student &amp;&amp;
-    myGroup.created_by === student.studentId &amp;&amp;
-    myGroup.status === 'forming';
+  const busy = loading || (!error &amp;&amp; result?.requestKey !== requestKey) || search.trim() !== filters.q;
+  const pagination = result?.pagination || { page: 1, pageSize: filters.pageSize, total: 0, totalPages: 1 };
+  const stats = result?.stats;
+  const hasFilters = Boolean(search || filters.status !== 'all' || filters.experience !== 'all' || filters.cohort || filters.slot);
+  const start = pagination.total ? (pagination.page - 1) * pagination.pageSize + 1 : 0;
+  const end = Math.min(pagination.page * pagination.pageSize, pagination.total);
 
   /**
-   * Pre-calculate summary numbers for the cards above the directory results
-   * @const stats
-   * @const available
-   * @const inGroups
-   * @const newStudents
+   * @function goToPage
+   * Go to the specified page in the results list for the student directory.
+   * @param {*} page - the page to go to.
    */
-  const stats = useMemo(() => {
-    const available = students.filter((item) => !item.group).length;
-    const inGroups = students.length - available;
-    const newStudents = students.filter((item) => item.isNew).length;
-
-    return {
-      total: students.length,
-      available,
-      inGroups,
-      newStudents,
-    };
-  }, [students]);
-
-  // Apply the search text and selected filter locally because the demo directory
-  // data set is small and this keeps the UI responsive while typing.
-  /**
-   * Apply the search text and selected filter
-   * @const filteredStudents
-   * @const normalizedQuery
-   */
-  const filteredStudents = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    return students.filter((item) => {
-      const searchable = [
-        item.name,
-        item.studentId,
-        item.email,
-        item.cohort,
-        ...item.slots,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      const matchesQuery =
-        !normalizedQuery || searchable.includes(normalizedQuery);
-
-      const matchesFilter =
-        filter === 'all' ||
-        (filter === 'available' &amp;&amp; !item.group) ||
-        (filter === 'in-group' &amp;&amp; item.group) ||
-        (filter === 'new' &amp;&amp; item.isNew) ||
-        (filter === 'returning' &amp;&amp; !item.isNew);
-
-      return matchesQuery &amp;&amp; matchesFilter;
-    });
-  }, [filter, query, students]);
-
-  if (loading) {
-    return (
-      &lt;div className="loading-screen">
-        Loading student directory...
-      &lt;/div>
-    );
+  function goToPage(page) {
+    if (busy || error) return;
+    setFilters((current) => ({ ...current, page: Math.max(1, Math.min(page, pagination.totalPages)) }));
   }
 
   return (
-    &lt;>
-      &lt;Head>
-        &lt;title>TeamUp — Student Directory&lt;/title>
-      &lt;/Head>
-
-      {toast &amp;&amp; (
-        &lt;div className={`toast toast-${toast.type}`}>
-          {toast.msg}
-        &lt;/div>
-      )}
-
-      &lt;nav>
-        &lt;div className="logo">
-          Team&lt;span>Up&lt;/span>
-        &lt;/div>
-
-        &lt;div className="nav-right">
-          {student &amp;&amp; (
-            &lt;span className="nav-name">
-              {student.name}
-
-              &lt;span
-                className={`badge ${
-                  student.isNew
-                    ? 'badge-amber'
-                    : 'badge-green'
-                }`}
-              >
-                {student.isNew
-                  ? 'New Student'
-                  : 'Returning'}
-              &lt;/span>
-            &lt;/span>
-          )}
-
-          &lt;button
-            type="button"
-            className="directory-nav-link"
-            onClick={() => router.push('/dashboard')}
-          >
-            Dashboard
-          &lt;/button>
-
-          &lt;button
-            type="button"
-            className="logout-btn"
-            onClick={handleLogout}
-          >
-            Sign out
-          &lt;/button>
+    &lt;div className={styles.root}>
+      &lt;Head>&lt;title>TeamUp - Student Directory&lt;/title>&lt;/Head>
+      &lt;nav className={styles.nav} aria-label="Main navigation">
+        &lt;Link href="/dashboard" className={styles.logo}>Team&lt;span>Up&lt;/span>&lt;/Link>
+        &lt;div className={styles.navActions}>
+          {student &amp;&amp; &lt;span className={styles.signedIn}>{student.name}&lt;/span>}
+          &lt;Link href="/dashboard" className={styles.navLink}>&lt;ArrowLeft size={16} /> Dashboard&lt;/Link>
+          &lt;button type="button" className={styles.iconButton} onClick={handleLogout} title="Sign out" aria-label="Sign out">&lt;LogOut size={18} />&lt;/button>
         &lt;/div>
       &lt;/nav>
 
-      &lt;main className="container directory-page">
-        &lt;section className="directory-hero">
-          &lt;div>
-            &lt;h1 className="page-title">Student Directory&lt;/h1>
+      &lt;main className={styles.main}>
+        &lt;header className={styles.header}>
+          &lt;div>&lt;p className={styles.eyebrow}>{result?.unit || 'Students'}&lt;/p>&lt;h1>Student Directory&lt;/h1>&lt;/div>
+          &lt;Link href="/dashboard" className={styles.currentGroup}>
+            &lt;UsersRound size={19} />
+            &lt;span>&lt;small>My group&lt;/small>&lt;strong>{groupLoading ? 'Loading...' : groupError ? 'Unavailable' : myGroup?.name || 'Not in a group'}&lt;/strong>&lt;/span>
+            &lt;ChevronRight size={16} />
+          &lt;/Link>
+        &lt;/header>
 
-            &lt;p className="page-subtitle">
-              Browse classmates, compare tutorial availability and
-              find teammates who can fit your group constraints.
-            &lt;/p>
+        &lt;dl className={styles.stats} aria-label="Directory summary">
+          {[
+            ['Total students', stats?.total, styles.total],
+            ['Available', stats?.available, styles.available],
+            ['In groups', stats?.inGroups, styles.grouped],
+            ['New students', stats?.newStudents, styles.newStudents],
+          ].map(([label, value, color]) => &lt;div key={label}>&lt;dt>{label}&lt;/dt>&lt;dd className={color}>{value ?? '-'}&lt;/dd>&lt;/div>)}
+        &lt;/dl>
+
+        &lt;section className={styles.controls} aria-label="Directory filters">
+          &lt;div className={styles.searchRow}>
+            &lt;label className={styles.searchBox}>
+              &lt;Search size={19} aria-hidden="true" />
+              &lt;input aria-label="Search students" type="search" placeholder="Search name, ID, email or tutorial" maxLength={100} value={search} onChange={(event) => setSearch(event.target.value)} />
+            &lt;/label>
+            &lt;label className={styles.sortLabel}>Sort
+              &lt;select aria-label="Sort students" value={filters.sort} onChange={(event) => changeFilter('sort', event.target.value)}>
+                &lt;option value="name-asc">Name A to Z&lt;/option>&lt;option value="name-desc">Name Z to A&lt;/option>&lt;option value="id-asc">Student ID&lt;/option>
+              &lt;/select>
+            &lt;/label>
+          &lt;/div>
+          &lt;div className={styles.filterRow}>
+            &lt;label>Group status&lt;select aria-label="Group status" value={filters.status} onChange={(event) => changeFilter('status', event.target.value)}>
+              &lt;option value="all">All statuses&lt;/option>&lt;option value="available">Available&lt;/option>&lt;option value="grouped">In a group&lt;/option>
+            &lt;/select>&lt;/label>
+            &lt;label>Student type&lt;select aria-label="Student type" value={filters.experience} onChange={(event) => changeFilter('experience', event.target.value)}>
+              &lt;option value="all">All students&lt;/option>&lt;option value="new">New&lt;/option>&lt;option value="returning">Returning&lt;/option>
+            &lt;/select>&lt;/label>
+            &lt;label>Cohort&lt;select aria-label="Cohort" value={filters.cohort} onChange={(event) => changeFilter('cohort', event.target.value)}>
+              &lt;option value="">All cohorts&lt;/option>{result?.filters?.cohorts.map((cohort) => &lt;option key={cohort} value={cohort}>{cohort}&lt;/option>)}
+            &lt;/select>&lt;/label>
+            &lt;label>Tutorial&lt;select aria-label="Tutorial" value={filters.slot} onChange={(event) => changeFilter('slot', event.target.value)}>
+              &lt;option value="">All tutorials&lt;/option>{result?.filters?.slots.map((slot) => &lt;option key={slot} value={slot}>{slot}&lt;/option>)}
+            &lt;/select>&lt;/label>
+            &lt;button type="button" className={styles.resetButton} disabled={!hasFilters} onClick={clearFilters}>&lt;RotateCcw size={15} /> Clear filters&lt;/button>
+          &lt;/div>
+        &lt;/section>
+
+        {groupError &amp;&amp; &lt;div className={styles.warning} role="status">&lt;CircleAlert size={18} />&lt;span>{groupError}&lt;/span>&lt;button type="button" onClick={() => setRefresh((value) => value + 1)}>Retry&lt;/button>&lt;/div>}
+
+        &lt;section className={styles.results} aria-label="Students">
+          &lt;div className={styles.resultBar}>
+            &lt;h2>Classmates &lt;span>{pagination.total}&lt;/span>&lt;/h2>
+            &lt;span className={styles.resultStatus} role="status" aria-live="polite">{busy ? &lt;>&lt;LoaderCircle size={15} className={styles.spin} /> Loading students...&lt;/> : error ? 'Directory unavailable' : start + '-' + end + ' of ' + pagination.total + ' students'}&lt;/span>
           &lt;/div>
 
-          {myGroup ? (
-            &lt;div className="directory-current-group">
-              &lt;span className="section-label">Current group&lt;/span>
-              &lt;strong>{myGroup.name}&lt;/strong>
-
-              &lt;span>
-                {myGroup.group_id} · {myGroup.status}
-              &lt;/span>
-            &lt;/div>
+          {error ? (
+            &lt;div className={styles.empty} role="alert">&lt;CircleAlert size={30} />&lt;h3>Unable to load students&lt;/h3>&lt;p>{error}&lt;/p>&lt;button type="button" className={styles.primaryButton} onClick={() => setRefresh((value) => value + 1)}>&lt;RotateCcw size={16} /> Retry&lt;/button>&lt;Link href="/dashboard">Back to Dashboard&lt;/Link>&lt;/div>
+          ) : !result ? (
+            &lt;div className={styles.empty}>&lt;LoaderCircle size={28} className={styles.spin} />&lt;p>Loading student directory...&lt;/p>&lt;/div>
+          ) : result.students.length === 0 ? (
+            &lt;div className={styles.empty}>&lt;UsersRound size={32} />&lt;h3>{hasFilters ? 'No matching students' : 'No students available'}&lt;/h3>{hasFilters &amp;&amp; &lt;button type="button" className={styles.primaryButton} onClick={clearFilters}>&lt;RotateCcw size={16} /> Clear filters&lt;/button>}&lt;/div>
           ) : (
-            &lt;div className="directory-current-group">
-              &lt;span className="section-label">Current group&lt;/span>
-              &lt;strong>Not in a group&lt;/strong>
-
-              &lt;span>
-                Create one from the dashboard to send invites.
-              &lt;/span>
+            &lt;div className={styles.tableWrap} aria-busy={busy}>
+              &lt;table className={styles.table}>
+                &lt;caption className={styles.srOnly}>Students in {result.unit}&lt;/caption>
+                &lt;thead>&lt;tr>&lt;th scope="col">Student&lt;/th>&lt;th scope="col">Cohort&lt;/th>&lt;th scope="col">Type&lt;/th>&lt;th scope="col">Group&lt;/th>&lt;th scope="col">Tutorial availability&lt;/th>&lt;th scope="col">&lt;span className={styles.srOnly}>Actions&lt;/span>&lt;/th>&lt;/tr>&lt;/thead>
+                &lt;tbody>{result.students.map((item) => {
+                  const isCurrentStudent = student?.studentId === item.studentId;
+                  const canInvite = isCreator &amp;&amp; !groupLoading &amp;&amp; !groupError &amp;&amp; !item.group &amp;&amp; !isCurrentStudent &amp;&amp; item.teamupId;
+                  const sent = invited.includes(item.teamupId);
+                  const expanded = expandedSlots.includes(item.studentId);
+                  return &lt;tr key={item.studentId}>
+                    &lt;td className={styles.studentCell}>
+                      &lt;div className={styles.identity}>
+                        &lt;span className={styles.avatar} aria-hidden="true">{item.name?.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('') || &lt;UserRound size={18} />}&lt;/span>
+                        &lt;div>&lt;div className={styles.nameLine}>{item.teamupId ? &lt;Link href={'/students/' + encodeURIComponent(item.teamupId)}>{item.name}&lt;/Link> : &lt;strong>{item.name}&lt;/strong>}{isCurrentStudent &amp;&amp; &lt;span className={styles.you}>You&lt;/span>}&lt;/div>&lt;p>{item.studentId}&lt;span> / {item.teamupId || 'No TeamUp ID'}&lt;/span>&lt;/p>&lt;p className={styles.email} title={item.email}>{item.email}&lt;/p>&lt;/div>
+                      &lt;/div>
+                    &lt;/td>
+                    &lt;td className={styles.cohortCell}>&lt;span className={styles.mobileLabel}>Cohort&lt;/span>{item.cohort || '-'}&lt;/td>
+                    &lt;td className={styles.typeCell}>&lt;span className={item.isNew ? styles.newBadge : styles.returningBadge}>{item.isNew ? 'New' : 'Returning'}&lt;/span>&lt;/td>
+                    &lt;td className={styles.groupCell}>&lt;span className={styles.mobileLabel}>Group&lt;/span>{item.group ? &lt;div>&lt;strong>{item.group.name}&lt;/strong>&lt;small className={styles.groupStatus}>{item.group.status === 'locked' ? 'Locked' : 'Forming'}&lt;/small>&lt;/div> : &lt;span className={styles.availableStatus}>Available&lt;/span>}&lt;/td>
+                    &lt;td className={styles.slotsCell}>
+                      &lt;div className={styles.slots}>{(expanded ? item.slots : item.slots.slice(0, 2)).map((slot) => &lt;span key={slot} className={styles.slot}>&lt;CalendarDays size={12} />{slot}&lt;/span>)}
+                        {!item.slots.length &amp;&amp; &lt;span className={styles.muted}>Not set&lt;/span>}
+                        {item.slots.length > 2 &amp;&amp; &lt;button type="button" className={styles.moreSlots} aria-expanded={expanded} aria-label={(expanded ? 'Show fewer tutorials for ' : 'Show all tutorials for ') + item.name} onClick={() => setExpandedSlots((current) => expanded ? current.filter((id) => id !== item.studentId) : [...current, item.studentId])}>{expanded ? 'Less' : '+' + (item.slots.length - 2)}&lt;/button>}
+                      &lt;/div>
+                    &lt;/td>
+                    &lt;td className={styles.actionsCell}>&lt;div className={styles.rowActions}>
+                      {item.teamupId &amp;&amp; &lt;Link className={styles.iconButton} href={'/students/' + encodeURIComponent(item.teamupId)} aria-label={'View profile of ' + item.name} title="View profile">&lt;UserRound size={17} />&lt;/Link>}
+                      {canInvite &amp;&amp; &lt;button type="button" className={sent ? styles.sentButton : styles.inviteButton} disabled={sent || Boolean(invitingId) || busy} title={sent ? 'Invite sent' : 'Invite to your group'} aria-label={(sent ? 'Invite sent to ' : 'Invite ') + item.name} onClick={() => handleInvite(item.teamupId)}>{invitingId === item.teamupId ? &lt;LoaderCircle size={16} className={styles.spin} /> : sent ? &lt;Check size={16} /> : &lt;UserRoundPlus size={16} />}&lt;span>{sent ? 'Sent' : 'Invite'}&lt;/span>&lt;/button>}
+                    &lt;/div>&lt;/td>
+                  &lt;/tr>;
+                })}&lt;/tbody>
+              &lt;/table>
             &lt;/div>
           )}
-        &lt;/section>
 
-        &lt;section
-          className="directory-stats-grid"
-          aria-label="Directory summary"
-        >
-          &lt;div className="directory-stat-card">
-            &lt;span>Total students&lt;/span>
-            &lt;strong>{stats.total}&lt;/strong>
-          &lt;/div>
-
-          &lt;div className="directory-stat-card">
-            &lt;span>Available&lt;/span>
-            &lt;strong>{stats.available}&lt;/strong>
-          &lt;/div>
-
-          &lt;div className="directory-stat-card">
-            &lt;span>In groups&lt;/span>
-            &lt;strong>{stats.inGroups}&lt;/strong>
-          &lt;/div>
-
-          &lt;div className="directory-stat-card">
-            &lt;span>New students&lt;/span>
-            &lt;strong>{stats.newStudents}&lt;/strong>
-          &lt;/div>
-        &lt;/section>
-
-        &lt;section className="card directory-controls">
-          &lt;label
-            className="directory-search-label"
-            htmlFor="student-search"
-          >
-            Search student directory
-          &lt;/label>
-
-          &lt;div className="directory-toolbar">
-            &lt;input
-              id="student-search"
-              className="text-input directory-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name, student ID, cohort or tutorial slot"
-            />
-
-            &lt;div
-              className="directory-filter-group"
-              aria-label="Student filter"
-            >
-              {filterOptions.map((option) => (
-                &lt;button
-                  key={option.value}
-                  type="button"
-                  className={`directory-filter ${
-                    filter === option.value ? 'active' : ''
-                  }`}
-                  onClick={() => setFilter(option.value)}
-                >
-                  {option.label}
-                &lt;/button>
-              ))}
+          &lt;footer className={styles.pagination}>
+            &lt;label>Rows per page&lt;select aria-label="Rows per page" value={filters.pageSize} onChange={(event) => changeFilter('pageSize', Number(event.target.value))}>{[10, 25, 50, 100].map((size) => &lt;option key={size} value={size}>{size}&lt;/option>)}&lt;/select>&lt;/label>
+            &lt;div className={styles.pageControls}>
+              &lt;button type="button" className={styles.iconButton} title="First page" aria-label="First page" disabled={busy || Boolean(error) || pagination.page &lt;= 1} onClick={() => goToPage(1)}>&lt;ChevronsLeft size={17} />&lt;/button>
+              &lt;button type="button" className={styles.iconButton} title="Previous page" aria-label="Previous page" disabled={busy || Boolean(error) || pagination.page &lt;= 1} onClick={() => goToPage(pagination.page - 1)}>&lt;ChevronLeft size={17} />&lt;/button>
+              &lt;form onSubmit={(event) => { event.preventDefault(); const page = Number(pageInput); if (Number.isInteger(page)) goToPage(page); }}>
+                &lt;label>Page&lt;input type="number" aria-label="Page number" min="1" max={pagination.totalPages} required value={pageInput} onChange={(event) => setPageInput(event.target.value)} disabled={busy || Boolean(error)} />&lt;/label>&lt;span>of {pagination.totalPages}&lt;/span>
+                &lt;button type="submit" className={styles.iconButton} title="Go to page" aria-label="Go to page" disabled={busy || Boolean(error) || !pageInput || Number(pageInput) === pagination.page}>&lt;ArrowRight size={15} />&lt;/button>
+              &lt;/form>
+              &lt;button type="button" className={styles.iconButton} title="Next page" aria-label="Next page" disabled={busy || Boolean(error) || pagination.page >= pagination.totalPages} onClick={() => goToPage(pagination.page + 1)}>&lt;ChevronRight size={17} />&lt;/button>
+              &lt;button type="button" className={styles.iconButton} title="Last page" aria-label="Last page" disabled={busy || Boolean(error) || pagination.page >= pagination.totalPages} onClick={() => goToPage(pagination.totalPages)}>&lt;ChevronsRight size={17} />&lt;/button>
             &lt;/div>
-          &lt;/div>
-        &lt;/section>
-
-        &lt;section className="directory-results">
-          &lt;div className="directory-results-header">
-            &lt;div className="card-title teal">
-              Browse students
-            &lt;/div>
-
-            &lt;span>{filteredStudents.length} matching&lt;/span>
-          &lt;/div>
-
-          {filteredStudents.length === 0 ? (
-            &lt;div className="card directory-empty-state">
-              &lt;div className="empty-title">
-                No students match this search.
-              &lt;/div>
-
-              &lt;p className="muted">
-                Try another name, cohort or tutorial slot.
-              &lt;/p>
-            &lt;/div>
-          ) : (
-            &lt;div className="directory-grid">
-              {filteredStudents.map((item) => {
-                const isCurrentStudent =
-                  student?.studentId === item.studentId;
-
-                // Invitations should only target ungrouped classmates, never the logged-in user.
-                const canInvite =
-                  isCreator &amp;&amp;
-                  !item.group &amp;&amp;
-                  !isCurrentStudent;
-
-                return (
-                  &lt;article
-                    key={item.studentId}
-                    className="directory-student-card"
-                  >
-                    &lt;div className="directory-student-top">
-                      &lt;div className="directory-avatar">
-                        {item.name[0]}
-                      &lt;/div>
-
-                      &lt;div className="directory-student-main">
-                        &lt;div className="directory-name-row">
-                          &lt;h2>{item.name}&lt;/h2>
-
-                          {isCurrentStudent &amp;&amp; (
-                            &lt;span className="badge badge-blue">
-                              You
-                            &lt;/span>
-                          )}
-                        &lt;/div>
-
-                        &lt;p>{item.studentId}&lt;/p>
-                      &lt;/div>
-
-                      &lt;span
-                        className={`badge ${
-                          item.isNew
-                            ? 'badge-amber'
-                            : 'badge-green'
-                        }`}
-                      >
-                        {item.isNew ? 'New' : 'Returning'}
-                      &lt;/span>
-                    &lt;/div>
-
-                    &lt;div className="directory-detail-list">
-                      &lt;div>
-                        &lt;span>Cohort&lt;/span>
-                        &lt;strong>{item.cohort}&lt;/strong>
-                      &lt;/div>
-
-                      &lt;div>
-                        &lt;span>Group status&lt;/span>
-
-                        &lt;strong>
-                          {item.group
-                            ? item.group.name
-                            : 'Available'}
-                        &lt;/strong>
-                      &lt;/div>
-                    &lt;/div>
-
-                    &lt;div className="directory-slots">
-                      {item.slots.map((slot) => (
-                        &lt;span key={slot} className="slot">
-                          {slot}
-                        &lt;/span>
-                      ))}
-                    &lt;/div>
-
-                    &lt;div className="directory-card-footer">
-                      &lt;span>{item.email}&lt;/span>
-
-                      &lt;div className="directory-card-actions">
-                        &lt;button
-                          type="button"
-                          className="btn btn-teal btn-sm"
-                          onClick={() =>
-                            handleViewProfile(item.studentId)
-                          }
-                        >
-                          View profile
-                        &lt;/button>
-
-                        {canInvite ? (
-                          &lt;button
-                            type="button"
-                            className="btn btn-blue btn-sm"
-                            disabled={
-                              invitingId === item.studentId
-                            }
-                            onClick={() =>
-                              handleInvite(item.studentId)
-                            }
-                          >
-                            {invitingId === item.studentId
-                              ? 'Sending...'
-                              : 'Invite'}
-                          &lt;/button>
-                        ) : (
-                          &lt;span
-                            className={`directory-status ${
-                              item.group
-                                ? 'is-busy'
-                                : 'is-open'
-                            }`}
-                          >
-                            {isCurrentStudent
-                              ? 'Current user'
-                              : item.group
-                                ? item.group.status
-                                : 'Open'}
-                          &lt;/span>
-                        )}
-                      &lt;/div>
-                    &lt;/div>
-                  &lt;/article>
-                );
-              })}
-            &lt;/div>
-          )}
+          &lt;/footer>
         &lt;/section>
       &lt;/main>
-    &lt;/>
+      {toast &amp;&amp; &lt;div className={toast.type === 'error' ? styles.errorToast : styles.toast} role={toast.type === 'error' ? 'alert' : 'status'}>&lt;span>{toast.message}&lt;/span>&lt;button type="button" className={styles.iconButton} aria-label="Dismiss notification" onClick={() => setToast(null)}>&lt;X size={16} />&lt;/button>&lt;/div>}
+    &lt;/div>
   );
-}</code></pre>
+}
+</code></pre>
         </article>
     </section>
 
@@ -541,13 +362,13 @@ export default function StudentDirectory() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#StudentDirectoryBuildsTeamUp'sstudentdirectorypageusingreact.js">StudentDirectoryBuilds TeamUp's student directory page using react.js</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#c">c</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#error">error</a></li><li><a href="global.html#existingInvite">existingInvite</a></li><li><a href="global.html#filterOptions">filterOptions</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleViewProfileOpentheprofilepagefortheselectedstudent.">handleViewProfileOpen the profile page for the selected student.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraintsDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraintsDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#inviteRows">inviteRows</a></li><li><a href="global.html#invitingId">invitingId</a></li><li><a href="global.html#isCreator">isCreator</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#newStudents">newStudents</a></li><li><a href="global.html#normalizedQuery">normalizedQuery</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pub:">pub:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#shared">shared</a></li><li><a href="global.html#sharedSlots">sharedSlots</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowashortfeedbackmessageafterinviteactionsorAPIerrors.">showToastShow a short feedback message after invite actions or API errors.</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#students">students</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#token">token</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#AddTeamPageBuildtheAddTeamPageusingReact.js">AddTeamPageBuild the Add Team Page using React.js</a></li><li><a href="global.html#CreateUnitPageBuildsTeamUp'sCreateUnitpageusingreact.js">CreateUnitPageBuilds TeamUp's Create Unit page using react.js</a></li><li><a href="global.html#CsvUploadPageBuildstheCSVuploadpageusingReact.js">CsvUploadPageBuilds the CSV upload page using React.js</a></li><li><a href="global.html#EditProfilePageThisfunctioncreatestheEditProfilepageusingreact.js">EditProfilePageThis function creates the Edit Profile page using react.js</a></li><li><a href="global.html#EditTeamPageBuildtheEditTeamPageinReact.js">EditTeamPageBuild the Edit Team Page in React.js</a></li><li><a href="global.html#EditUnitPageBuildsTeamUp'seditunitpageusingreact.js">EditUnitPageBuilds TeamUp's edit unit page using react.js</a></li><li><a href="global.html#EnrolStudentPageThisfunctionbuildstheenrolstudentpageusingreact.js">EnrolStudentPageThis function builds the enrol student page using react.js</a></li><li><a href="global.html#ExportCsvPageBuildstheExportCsvPageusingReact.js">ExportCsvPageBuilds the ExportCsvPage using React.js</a></li><li><a href="global.html#ManageGroupsPageBuildstheManageGroupspageusingreact.js">ManageGroupsPageBuilds the Manage Groups page using react.js</a></li><li><a href="global.html#ManageTeamsPageBuildstheManageTeamspageusingreact.js">ManageTeamsPageBuilds the Manage Teams page using react.js</a></li><li><a href="global.html#StudentDirectoryDisplaysaserver-paginateddirectoryandkeepsinvitationactionstiedtothecurrentgroup.">StudentDirectoryDisplays a server-paginated directory and keeps invitation actions tied to the current group.</a></li><li><a href="global.html#StudentProfileConstructstheStudentProfilepageusingreact.js">StudentProfileConstructs the Student Profile page using react.js</a></li><li><a href="global.html#TeamGroupsPageBuildstheTeamGroupsPageinReact.js">TeamGroupsPageBuilds the Team Groups Page in React.js</a></li><li><a href="global.html#UnenrolStudentPageThisfunctionbuildstheunenrolstudentpageusingreact.js">UnenrolStudentPageThis function builds the unenrol student page using react.js</a></li><li><a href="global.html#UnitsPageBuildstheUnitspageforadminfeaturesusingreact.js">UnitsPageBuilds the Units page for admin features using react.js</a></li><li><a href="global.html#addSlotAddsanewtimeslottotheunit">addSlotAdds a new timeslot to the unit</a></li><li><a href="global.html#adminDashboardBuildsTeamUpadmindashboardusingreact.js">adminDashboardBuilds TeamUp admin dashboard using react.js</a></li><li><a href="global.html#askAskaquestiontotheuserviatheCLI.">askAsk a question to the user via the CLI.</a></li><li><a href="global.html#changeFilterResetthepagewheneverafilterorpagesizechanges,soresultscannotappearfalselyempty">changeFilterReset the page whenever a filter or page size changes, so results cannot appear falsely empty</a></li><li><a href="global.html#clearFiltersResetthefiltersonthepagetotheirdefaultvalues.">clearFiltersReset the filters on the page to their default values.</a></li><li><a href="global.html#clearTokenCookieRemovestheJWTfromtheprovidedhtmlresponse,removingtheuser'sabilitytobeauthenticatedunlesstheyloginagain.">clearTokenCookieRemoves the JWT from the provided html response, removing the user's ability to be authenticated unless they login again.</a></li><li><a href="global.html#createToken">createToken</a></li><li><a href="global.html#data">data</a></li><li><a href="global.html#db">db</a></li><li><a href="global.html#deleteTeam">deleteTeam</a></li><li><a href="global.html#enrolmentCheck">enrolmentCheck</a></li><li><a href="global.html#enrolmentsPageBuildstheTeamUpenrolmentspageusingreact.js">enrolmentsPageBuilds the TeamUp enrolments page using react.js</a></li><li><a href="global.html#findSharedSlots">findSharedSlots</a></li><li><a href="global.html#formatLabelConvertsdatabasevaluessuchas%2522forming%2522intoreadablelabels">formatLabelConverts database values such as "forming" into readable labels</a></li><li><a href="global.html#formatRemoteStatusConvertsdatabasevalueforremotestudentintoareadablelabel">formatRemoteStatusConverts database value for remote student into a readable label</a></li><li><a href="global.html#generateStudents">generateStudents</a></li><li><a href="global.html#getDbDatabaseconnectionpoolthatcanbeusedforreadingandwritinginformationtothedatabase.">getDbDatabase connection pool that can be used for reading and writing information to the database.</a></li><li><a href="global.html#getEnrolments">getEnrolments</a></li><li><a href="global.html#getGroupMembers">getGroupMembers</a></li><li><a href="global.html#getGroups">getGroups</a></li><li><a href="global.html#getStudentSlots">getStudentSlots</a></li><li><a href="global.html#getTeams">getTeams</a></li><li><a href="global.html#getTokenFromRequestExtractaJSONwebtokenfromhtmlrequestcookies">getTokenFromRequestExtract a JSON web token from html request cookies</a></li><li><a href="global.html#goToPageGotothespecifiedpageintheresultslistforthestudentdirectory.">goToPageGo to the specified page in the results list for the student directory.</a></li><li><a href="global.html#groupName">groupName</a></li><li><a href="global.html#grpRows">grpRows</a></li><li><a href="global.html#handleAvailabilitySub">handleAvailabilitySub</a></li><li><a href="global.html#handleAvailabilitySubmit">handleAvailabilitySubmit</a></li><li><a href="global.html#handleChangeUpdateformstatewheninputchanges">handleChangeUpdate form state when input changes</a></li><li><a href="global.html#handleChangeUpdateuserinputinforms">handleChangeUpdate user input in forms</a></li><li><a href="global.html#handleChangeUpdatestheprofileformstatewiththeinformationthattheuserfillsin.">handleChangeUpdates the profile form state with the information that the user fills in.</a></li><li><a href="global.html#handleChangehandleformchangesonpage">handleChangehandle form changes on page</a></li><li><a href="global.html#handleCopyTeamUpId">handleCopyTeamUpId</a></li><li><a href="global.html#handleCreate">handleCreate</a></li><li><a href="global.html#handleDeleteDeleteaunitafterconfirmation">handleDeleteDelete a unit after confirmation</a></li><li><a href="global.html#handleExport">handleExport</a></li><li><a href="global.html#handleFileChangeReadstheCSVfileandstoresitstextcontent">handleFileChangeReads the CSV file and stores its text content</a></li><li><a href="global.html#handleGroupSelectChecksifthegrouphasbeenaddedtotheteam,updatesgroupselection,teamsize,andnewmembercountsaccordinglyifthegrouphasbeenaddedorremovedfromtheteam.">handleGroupSelectChecks if the group has been added to the team, updates group selection, team size, and new member counts accordingly if thegroup has been added or removed from the team.</a></li><li><a href="global.html#handleInvite">handleInvite</a></li><li><a href="global.html#handleInviteStudent">handleInviteStudent</a></li><li><a href="global.html#handleJoin">handleJoin</a></li><li><a href="global.html#handleLeave">handleLeave</a></li><li><a href="global.html#handleLock">handleLock</a></li><li><a href="global.html#handleLogin">handleLogin</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleLogoutLogtheuseroutofTeamUp">handleLogoutLog the user out of TeamUp</a></li><li><a href="global.html#handleProfileSubmit">handleProfileSubmit</a></li><li><a href="global.html#handleRespondInvite">handleRespondInvite</a></li><li><a href="global.html#handleSlotSelectAfunctionthatadjustswhattimeslotsastudenthasselectedfortheiravailability.">handleSlotSelectA function that adjusts what timeslots a student has selected for their availability.</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitSubmittheformtocreateaunit.">handleSubmitSubmit the form to create a unit.</a></li><li><a href="global.html#handleTimeslotInputThisfunctionupdatesthetimeslotinputfield.">handleTimeslotInputThis function updates the timeslot input field.</a></li><li><a href="global.html#handler">handler</a></li><li><a href="global.html#handlerThisfunctionhandlesHTTPrequestsrelatedtounitIDs:GET-getasingleunitwithitsconstraintsPUT-editunitdetailsandconstraints,oredittimeslotsforaunitDELETE-deleteaunit">handlerThis function handles HTTP requests related to unit IDs:GET    - get a single unit with its constraintsPUT    - edit unit details and constraints, or edit timeslots for a unitDELETE - delete a unit</a></li><li><a href="global.html#handlerThisfunctionhandleslogoutrequestspassedoverHTTP">handlerThis function handles log out requests passed over HTTP</a></li><li><a href="global.html#isCreator:">isCreator:</a></li><li><a href="global.html#loadData">loadData</a></li><li><a href="global.html#loadGroupAndUnitData">loadGroupAndUnitData</a></li><li><a href="global.html#loadStudentProfile">loadStudentProfile</a></li><li><a href="global.html#loadStudentProfileFetchesallstudentsandselectstheprofilematchingtheURL.Ifunabletofindorloadastudent'sprofile,throwanerror.">loadStudentProfileFetches all students and selects the profile matching the URL.If unable to find or load a student's profile, throw an error.</a></li><li><a href="global.html#loadUnits">loadUnits</a></li><li><a href="global.html#loading">loading</a></li><li><a href="global.html#loading:">loading:</a></li><li><a href="global.html#lockAllGroups">lockAllGroups</a></li><li><a href="global.html#openSeats:">openSeats:</a></li><li><a href="global.html#pubRes:">pubRes:</a></li><li><a href="global.html#removeSlotRemovesatimeslotfromtheunit">removeSlotRemoves a timeslot from the unit</a></li><li><a href="global.html#requireAuthConfirmsthattheuserisauthenticatedwithavalidJSONWebToken">requireAuthConfirms that the user is authenticated with a valid JSON Web Token</a></li><li><a href="global.html#saveTeamGroups">saveTeamGroups</a></li><li><a href="global.html#seed">seed</a></li><li><a href="global.html#sendInviteEmail">sendInviteEmail</a></li><li><a href="global.html#setTokenCookieSetstheprovidedJWTintotheresponsehtmlresponseheaderforauthenticationuseonotherpages">setTokenCookieSets the provided JWT into the response html response header for authentication use on other pages</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforactionsonthepage">showToastA reusable feedback helper for actions on the page</a></li><li><a href="global.html#showToastAreusablefeedbackhelperforcreate,join,invite,lock,andleaveactions">showToastA reusable feedback helper for create, join, invite, lock, and leave actions</a></li><li><a href="global.html#showToastReusablefeedbackhelperforactionsonpage.">showToastReusable feedback helper for actions on page.</a></li><li><a href="global.html#showToastShowanotificationforfourseconds,replacingthepreviousnotificationtimer.">showToastShow a notification for four seconds, replacing the previous notification timer.</a></li><li><a href="global.html#showToastShowatemporarynotification">showToastShow a temporary notification</a></li><li><a href="global.html#showToastShowatemporarynotificationmessage">showToastShow a temporary notification message</a></li><li><a href="global.html#showToastShowtemporarynotificationmessagetoconfirmactionshavebeencompleted">showToastShow temporary notification message to confirm actions have been completed</a></li><li><a href="global.html#showToastShowsatemporarynotificationmessage">showToastShows a temporary notification message</a></li><li><a href="global.html#toast">toast</a></li><li><a href="global.html#unlockGroup">unlockGroup</a></li><li><a href="global.html#validateGroupReady">validateGroupReady</a></li><li><a href="global.html#validateJoin">validateJoin</a></li><li><a href="global.html#verifyTokenVerifythataprovidedJWTisactuallyforusewithTeamUp">verifyTokenVerify that a provided JWT is actually for use with TeamUp</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Aug 23 2026 20:43:17 GMT+1000 (Australian Eastern Standard Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 21:34:22 GMT+1000 (Australian Eastern Standard Time)
 </footer>
 
 <script> prettyPrint(); </script>
