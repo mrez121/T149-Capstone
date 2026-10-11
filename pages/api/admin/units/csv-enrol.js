@@ -80,21 +80,22 @@ export default async function handler(req, res) {
 
     // Check if already enrolled in this unit
     const [existing] = await db.query(
-      'SELECT id FROM unit_enrolments WHERE unit_id = ? AND student_id = ?',
-      [unitId, studentId]
+      'SELECT id FROM unit_enrolments WHERE student_id = ?',
+      [studentId]
     );
 
     if (existing.length > 0) {
       results.skipped.push(studentId);
-      continue;
     }
-
-    // Enrol the student
-    await db.query(
-      'INSERT INTO unit_enrolments (unit_id, student_id) VALUES (?, ?)',
-      [unitId, studentId]
-    );
-    results.enrolled.push(studentId);
+    else {
+      // Enrol the student
+      await db.query(
+        'INSERT IGNORE INTO unit_enrolments (unit_id, student_id) VALUES (?, ?)',
+        [unitId, studentId]
+      );
+      results.enrolled.push(studentId);
+    }    
+    
   }
 
   return res.status(200).json({
