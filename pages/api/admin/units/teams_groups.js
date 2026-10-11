@@ -10,7 +10,7 @@ import { requireAuth } from "../../../../lib/session";
  * @async
  * Handler function for managing requests related team groups.
  * GET - Retrieve locked groups in a unit for team assignment
- * PUT - Update the groups allocated to a team.
+ * PUT - Validate and atomically replace the groups allocated to a team.
  * @param {*} req - the HTML request
  * @param {*} res - the HTML response
  * @returns a HTML status code and a json object
@@ -73,48 +73,103 @@ export default async function handler(req, res) {
     if(req.method === 'PUT') {
         const unitId = req.query.unit;
         const teamId = req.query.teamId;
-        const {teamGroups, teamSize} = req.body;
+        const {teamGroups, teamSize} = req.body || {};
 
-        // Check that the team exists
-        const [teamExists] = await db.query('SELECT * FROM teams WHERE team_id = ? AND unit_id = ?', [teamId, unitId]);
-        if(!teamExists.length) {
-            return res.status(404).json({error: 'Team not found'});
+        // Reject malformed requests before making any allocation changes. Empty teams are allowed.
+        if(typeof unitId !== 'string' || !unitId.trim() ||
+            typeof teamId !== 'string' || !teamId.trim() ||
+            !Array.isArray(teamGroups) ||
+            teamGroups.some(group => typeof group !== 'string' || !group.trim() || group.length > 20) ||
+            new Set(teamGroups).size !== teamGroups.length ||
+            !Number.isSafeInteger(teamSize) || teamSize < 0) {
+            return res.status(400).json({error: 'Invalid team allocation.'});
         }
 
-        // Remove the team's current allocation of groups.
-        await db.query(
-            `DELETE FROM team_groups WHERE team_id = ?`,
-            [teamId]
-        );
+        let connection;
+        let transactionStarted = false;
+        try {
+            // A transaction must use one connection, rather than separate queries on the pool.
+            connection = await db.getConnection();
+            await connection.beginTransaction();
+            transactionStarted = true;
 
-        // If groups have been allocated to the team, save them in the DB here.
-        if(teamGroups) {
-            for(const group of teamGroups) {
-                // Check if selected group is already in another team
-                let [groupCheck] = await db.query(
-                    `SELECT * FROM team_groups WHERE group_id = ?`, group
+            // Serialize saves to this team and prevent it being deleted during the save.
+            const [teamExists] = await connection.query(
+                'SELECT * FROM teams WHERE team_id = ? AND unit_id = ? FOR UPDATE',
+                [teamId, unitId]
+            );
+            if(!teamExists.length) {
+                throw Object.assign(new Error('Team not found'), {status: 404});
+            }
+
+            if(teamGroups.length) {
+                // Lock the shared group rows before checking allocations. This also serializes
+                // two administrators trying to assign the same group to different teams.
+                const [selectedGroups] = await connection.query(
+                    `SELECT group_id, unit_id, status FROM \`groups\`
+                    WHERE group_id IN (?) ORDER BY group_id FOR UPDATE`,
+                    [teamGroups]
                 );
-                if(groupCheck.length) {
-                    return res.status(403).json({error: `Group ${group} is already allocated to a team.`});
+                if(selectedGroups.length !== teamGroups.length ||
+                    selectedGroups.some(group => String(group.unit_id) !== unitId || group.status !== 'locked')) {
+                    throw Object.assign(new Error('Select locked groups from this unit.'), {status: 400});
                 }
-                let [update] = await db.query(
-                    `INSERT INTO team_groups (team_id, group_id) VALUES (?, ?)
-                    ON DUPLICATE KEY UPDATE id=id`,
-                    [teamId, group]
+
+                // A locking read sees allocations committed while waiting for the group locks.
+                // Groups already belonging to this team are valid selections.
+                const [conflicts] = await connection.query(
+                    `SELECT group_id FROM team_groups
+                    WHERE group_id IN (?) AND team_id != ? FOR UPDATE`,
+                    [teamGroups, teamId]
                 );
-                if(!update) {
-                    return res.status(500).json({error: 'Failed to update team - encountered a problem with the server.'});
+                if(conflicts.length) {
+                    throw Object.assign(
+                        new Error(`Group ${conflicts[0].group_id} is already allocated to a team.`),
+                        {status: 403}
+                    );
                 }
             }
-        }
 
-        // Update the team's size in the DB
-        const teamSizeUpdate = await db.query(
-            `UPDATE teams SET current_size = ? WHERE team_id = ?`,
-            [teamSize, teamId]
-        );
-        
-        return res.status(200).json({ok: true});
+            // Change allocations only after all selections pass validation. If any write fails,
+            // rollback restores both the original allocations and the team's previous size.
+            await connection.query('DELETE FROM team_groups WHERE team_id = ?', [teamId]);
+            for(const group of teamGroups) {
+                await connection.query(
+                    'INSERT INTO team_groups (team_id, group_id) VALUES (?, ?)',
+                    [teamId, group]
+                );
+            }
+            await connection.query(
+                'UPDATE teams SET current_size = ? WHERE team_id = ?',
+                [teamSize, teamId]
+            );
+
+            await connection.commit();
+            transactionStarted = false;
+            return res.status(200).json({ok: true});
+        } catch(error) {
+            if(transactionStarted) {
+                try {
+                    await connection.rollback();
+                } catch(rollbackError) {
+                    console.error('Failed to roll back team allocation:', rollbackError);
+                    // Never return a connection with an uncertain transaction to the pool.
+                    connection.destroy();
+                    connection = null;
+                }
+            }
+
+            if(!error.status) {
+                console.error('Failed to update team allocation:', error);
+            }
+            return res.status(error.status || 500).json({
+                error: error.status ? error.message : 'Unable to save team changes. Please try again.',
+            });
+        } finally {
+            if(connection) {
+                connection.release();
+            }
+        }
     }
 
     // Throw an error if incorrect method included in request
