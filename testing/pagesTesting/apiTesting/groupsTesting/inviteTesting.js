@@ -49,7 +49,9 @@
  * Test results:
  * 
  * FUNCTIONAL (black box) TEST #1
- * Tester name:
- * Date and time:
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 11:51
  * Test results:
+ * 01: PASS
+ * 02:  
  */

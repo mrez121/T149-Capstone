@@ -154,4 +154,31 @@
  * the local invites table during documentation testing.
  * Preconditions were confirmed: n10000001 is the creator of forming group G-9D4249
  * and n10000002 is available, so a later controlled invite test can use those accounts.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 13:15
+ * Test results: PASS
+ *  GET /api/groups/mine 304 in 8ms (next.js: 1.4ms, application-code: 6ms)
+    GET /api/students?q=&status=available&experience=all&cohort=&slot=&sort=name-asc&page=1&pageSize=25 200 in 12ms (next.js: 1.1ms, application-code: 11ms)
+    GET /api/students?q=&status=available&experience=new&cohort=&slot=&sort=name-asc&page=1&pageSize=25 200 in 14ms (next.js: 1.1ms, application-code: 13ms)
+    [Resend API Error]: {
+    status: 403,
+    error: {
+        message: 'You can only send testing emails to your own email address (teamup.student1@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.',
+        name: 'validation_error',
+        statusCode: 403
+    },
+    path: '/emails'
+    }
+    Email send error: {
+    message: 'You can only send testing emails to your own email address (teamup.student1@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.',
+    name: 'validation_error',
+    statusCode: 403
+    }
+    POST /api/groups/invite 200 in 404ms (next.js: 3ms, application-code: 401ms)
+    Resend API error expected as API is not configured to send emails to invalid/fake email addresses. Error presence indicates that email notification system is triggering.
+    User Camren Weimann was able to invite user Alana Kunde to Group 2 using the invite button on the student directory page
+    User Daren Kovacek is in Group 2 but cannot invite other users as they are not the group creator.
+    An invite sent in this way is correctly added to the database.
  */

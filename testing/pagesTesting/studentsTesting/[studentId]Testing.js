@@ -30,6 +30,16 @@
  * The current user's profile displayed the You badge and the correct empty availability and group states.
  * An unknown student ID displayed "Student profile not found." and the directory and Dashboard navigation worked correctly.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Test results: PASS
+ *  GET /api/students 200 in 41ms (next.js: 3ms, application-code: 39ms)
+    GET /api/students 200 in 35ms (next.js: 3ms, application-code: 31ms)
+    User Adam's (TU-C69A9A50-4) profile displayed correctly upon loading.
+    User Daren Kovacek's profile displayed correctly along with additional "You" badge and "Edit profile" button since they are the logged in user.
+    An unknown user id (TU-45gdf6-h) displays the "Student profile not found" page
+
  */
 
 /**
@@ -58,6 +68,23 @@
  * A route with no matching student displayed the not-found state.
  * After logout, an unauthenticated profile request returned 401 and redirected to the login page.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 11/10/26 13:30
+ * Test results: PASS
+ *  GET /api/students 200 in 60ms (next.js: 5ms, application-code: 56ms)
+    GET /api/students 200 in 63ms (next.js: 12ms, application-code: 51ms
+    Student information displays correctly, including profile details, availability, and ungrouped status
+    
+    GET /api/students 200 in 45ms (next.js: 3ms, application-code: 42ms)
+    GET /api/students 200 in 35ms (next.js: 1.6ms, application-code: 34ms)
+    Student information displays correctly, including profile details, availability, and grouped status
+    
+    GET /students/TU-9F6D3643-7 200 in 24ms (next.js: 10ms, application-code: 15ms)
+    GET /api/students 200 in 34ms (next.js: 3ms, application-code: 30ms)
+    Invalid id page presents a "Student profile not found" page with a button that takes the user back to the student directory.
+
  */
 
 /**
@@ -81,6 +108,13 @@
  * The user was signed out successfully and redirected to the login page.
  * The Sign in button was displayed correctly, and subsequent profile access was rejected with a 401 response.
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 11/10/26 13:34
+ * Test result: PASS
+ *  POST /api/auth/logout 200 in 5ms (next.js: 3ms, application-code: 2ms)
+ * User was signed out and redirected to login page successfully.
  */
 
 /**
