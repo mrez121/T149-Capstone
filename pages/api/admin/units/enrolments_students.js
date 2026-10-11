@@ -83,7 +83,7 @@ export default async function handler(req, res) {
         );
         if(enrolmentCheck.length) {
             const [enrolledUnit] = await db.query(
-                `SELECT unit_code FROM units WHERE id = ?`, unit
+                `SELECT unit_code FROM units WHERE id = ?`, enrolmentCheck[0].unit_id
             );
             return res.status(400).json({error: `Student ${student_id} is already enrolled in unit ${enrolledUnit[0].unit_code}`});
         }
