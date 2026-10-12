@@ -17,6 +17,7 @@ export default function ExportCsvPage() {
   const [unitCode, setUnitCode] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
+  const [fullExport, setFullExport] = useState('true');
 
   // Load all units on page load
   useEffect(() => {
@@ -43,7 +44,7 @@ export default function ExportCsvPage() {
     setError('');
 
     // Fetch the CSV file from the API
-    const res = await fetch(`/api/admin/export-csv?unitCode=${unitCode}`);
+    const res = await fetch(`/api/admin/export-csv?unitCode=${unitCode}&fullExport=${fullExport}`);
 
     if (!res.ok) {
       const data = await res.json();
@@ -95,11 +96,25 @@ export default function ExportCsvPage() {
             </select>
           </div>
 
+          <div className='asection-label'>Select Export Type</div>
+          <div className='afield'>
+            <label>Export Type</label>
+            <select value={fullExport.toString()} onChange={e => setFullExport(e.target.value)} required>
+              <option value='true'>
+                Full Export - for use with other applications.
+              </option>
+              <option value='false'>
+                Student IDs Only - use with Upload CSV to enrol students in other units.
+              </option>
+            </select>
+          </div>
+
           <div className="adivider" />
 
           {/* What is exported */}
           <div className="asection-label">What is included</div>
-          <div className="export-info">
+          {fullExport === 'true' ? (
+            <div className="export-info">
             <div className="export-row">
               <span className="export-col-header">Student ID</span>
               <span className="export-col-desc">Unique student identifier</span>
@@ -121,6 +136,14 @@ export default function ExportCsvPage() {
               <span className="export-col-desc">Min size, max size, new students — true/false per constraint</span>
             </div>
           </div>
+          ) : (
+            <div className='export-info'>
+              <div className='export-row'>
+                <span className='export-col-header'>Student ID</span>
+                <span className='export-col-desc'>Unique student identifier</span>
+              </div>
+            </div>
+          )}
 
           <div className="abtn-row" style={{marginTop: 24}}>
             <button className="abtn abtn-blue" type="submit" disabled={loading || !unitCode}>
