@@ -145,28 +145,32 @@ export default function EditUnitPage() {
    * @param {string} timeslot the timeslot to be formatted
    */
   function formatTimeslot(timeslot) {
+    // Split input into parts and use regex to split by - : and space
     const parts = timeslot.trim().toLowerCase().split(/[-\s:]/);
+    // Check if timeslot input has at least 2 parts (day and hour at minimum)
     if(parts.length < 2) {
       return null;
     }
+    // If only day and hour, add 00 as minutes to keep formatting consistent
     else if(parts.length < 3) {
       parts.push('00');
     }
     const [day, hour, min] = parts;
+    // Take first 3 characters of day string and format to uppercase
     const formattedDay = day.substring(0, 3).toUpperCase();
-    
+    // Parse the hour as a number, check if it's valid in 24 hour format, then store as a string
     const hourNum = parseInt(hour, 10);
     if(isNaN(hourNum) || hourNum < 0 || hourNum > 23) {
       return null;
     }
     const formattedHour = String(hourNum).padStart(2, '0');
-
+    // Same process as the hour for minutes
     const minNum = parseInt(min, 10);
     if(isNaN(minNum) || minNum < 0 || minNum > 59) {
       return null;
     }
     const formattedMin = String(minNum).padStart(2, '0');
-
+    // Return the timeslot as DAY-HH:MM
     return `${formattedDay}-${formattedHour}:${formattedMin}`;
   }
 
