@@ -139,18 +139,62 @@ export default function EditUnitPage() {
   }
 
   /**
+   * @function formatTimeslot
+   * This function formats the timeslot input field after adding the timeslot
+   * to the state array (called in addSlot function)
+   * @param {string} timeslot the timeslot to be formatted
+   */
+  function formatTimeslot(timeslot) {
+    const parts = timeslot.trim().toLowerCase().split(/[-\s:]/);
+    if(parts.length < 2) {
+      return null;
+    }
+    else if(parts.length < 3) {
+      parts.push('00');
+    }
+    const [day, hour, min] = parts;
+    const formattedDay = day.substring(0, 3).toUpperCase();
+    
+    const hourNum = parseInt(hour, 10);
+    if(isNaN(hourNum) || hourNum < 0 || hourNum > 23) {
+      return null;
+    }
+    const formattedHour = String(hourNum).padStart(2, '0');
+
+    const minNum = parseInt(min, 10);
+    if(isNaN(minNum) || minNum < 0 || minNum > 59) {
+      return null;
+    }
+    const formattedMin = String(minNum).padStart(2, '0');
+
+    return `${formattedDay}-${formattedHour}:${formattedMin}`;
+  }
+
+  /**
    * @function addSlot
    * Adds a new timeslot to the unit
    */
   function addSlot() {
-    const timeslot = timeslotInput;
+    const timeslot = timeslotInput.toUpperCase();
     const lastSlot = unitSlots.at(-1);
-    if(timeslot !== ''){
+    const formattedSlot = formatTimeslot(timeslot);
+    if(formattedSlot === null) {
+      showToast("Invalid timeslot input. Please use format DAY-HH:MM", 'error');
+      return;
+    }
+    const duplicateSlot = unitSlots.some(slot => slot.slot === formattedSlot);
+    if(duplicateSlot) {
+      showToast('Unable to add duplicate timeslot to unit.', 'error');
+      return;
+    }
+    else if(formattedSlot !== ''){
       if(lastSlot === undefined) {
-        setUnitSlots(unitSlots => [...unitSlots, {id: 0, slot: timeslot}]);
+        setUnitSlots(unitSlots => [...unitSlots, {id: 0, slot: formattedSlot}]);
+        return;
       }
       else {
-        setUnitSlots(unitSlots => [...unitSlots, {id: (lastSlot.id + 1), slot: timeslot}]);
+        setUnitSlots(unitSlots => [...unitSlots, {id: (lastSlot.id + 1), slot: formattedSlot}]);
+        return;
       }
     }
   }

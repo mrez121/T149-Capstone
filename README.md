@@ -39,7 +39,7 @@ IFB399 Capstone · QUT Technology For Teaching · Team 149
    - `npm run dev`
 
 6. With the local server running in the background, open your preferred browser and go to
-   - `htpp://localhost:3000`
+   - `http://localhost:3000`
 
 7. When you have finished using TeamUp, close your browser. Then, in the CLI where the web server is running:
    - press `CTRL+C` to close the server
