@@ -52,26 +52,43 @@ select {
 
 .toast {
   position: fixed;
-  top: 80px;
-  right: 20px;
+  top: 96px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   z-index: 999;
-  max-width: 380px;
-  padding: 12px 20px;
+  width: max-content;
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding: 14px 20px;
+  border: 1px solid #44515f;
   border-radius: 8px;
+  background: #1c2530;
+  color: var(--gray-light-A);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   font-size: 14px;
   font-weight: 500;
+  line-height: 1.5;
 }
 
 .toast-success {
-  color: var(--green);
-  background: lch(from var(--green) l c h / 0.15);
-  border: 1px solid lch(from var(--green) l c h / 0.4);
+  color: #c3f3df;
+  background: #143c2c;
+  border-color: #3ba577;
 }
 
 .toast-error {
-  color: var(--red);
-  background: lch(from var(--red) l c h / 0.15);
-  border: 1px solid lch(from var(--red) l c h / 0.4);
+  color: #ffdedf;
+  background: #4b2025;
+  border-color: #ee7d86;
+}
+
+.toast-warning {
+  color: #fff1c2;
+  background: #473510;
+  border-color: var(--amber);
 }
 
 .dashboard-error {

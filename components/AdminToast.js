@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-/** Keep admin notifications below the navigation, including when its buttons wrap. */
+/** Keep centered notifications below the navigation, including when its buttons wrap. */
 export default function AdminToast({ toast }) {
   const [top, setTop] = useState(null);
 
@@ -24,7 +24,7 @@ export default function AdminToast({ toast }) {
       aria-atomic="true"
       style={{
         top,
-        maxWidth: 'min(380px, calc(100vw - 40px))',
+        maxWidth: 'min(480px, calc(100vw - 32px))',
         overflowWrap: 'anywhere',
         maxHeight: `calc(100dvh - ${top + 20}px)`,
         overflowY: 'auto',
