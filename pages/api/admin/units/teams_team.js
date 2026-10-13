@@ -48,6 +48,15 @@ export default async function handler(req, res) {
         // Edit team details
         if(submitType === 'editTeam') {
             const {team_id, name} = req.body;
+            if(!team_id || !name) {
+                return res.status(400).json({error: 'Team ID and Name are required.'});
+            }
+            if(team_id.length > 20) {
+                return res.status(400).json({error: "Invalid Team ID."});
+            }
+            if(name.length > 100) {
+                return res.status(400).json({error: "Invalid Team Name."});
+            }
 
             // Check team exists
             const [team] = await db.query('SELECT * FROM teams WHERE team_id = ?', [team_id]);
