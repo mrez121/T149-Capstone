@@ -166,7 +166,7 @@ export default async function handler(req, res) {
       FROM students s
       JOIN unit_enrolments ue ON ue.student_id = s.student_id
       WHERE ue.unit_id = ?
-      ORDER BY s.name ASC
+      ORDER BY s.id ASC
     `, [unit.id]);
 
     // Build CSV rows
