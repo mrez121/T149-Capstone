@@ -51,7 +51,7 @@ export default async function handler(req, res) {
   );
   // Find the availability of the student
   const [slotRows] = await db.query(
-    'SELECT slot FROM availability WHERE student_id = ? ORDER BY slot',
+    'SELECT slot FROM availability WHERE student_id = ? ORDER BY id',
     [student.studentId]
   );
 
