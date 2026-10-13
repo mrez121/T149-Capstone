@@ -1,0 +1,17 @@
+These notes were written by Brandon Farnsworth to condense the feedback video received from Sarah Burland (Industry Partner) on 28/9/26
+
+Looks like one drive being root of project folder caused a clash with data seeding (something to fix in documentation)
+
+Need to make it clear if timeslots need to be in a specific format when creating or editing a unit
+
+Student enrolment form needs to have instructions on where to find the necessary info for enrolment
+
+CSV files should be included as part of submission for testing so that there's a clear copy of data
+
+Admin side looks good overall and everything seems to be working properly
+
+Some of the error handling (e.g. when a student isn't enrolled in a unit) is unclear.
+
+No group approval system on admin side when a group is locked?
+
+Most important thing for us atm is good documentation and clearer instructions that show our target users how to use the system (and especially important for ensuring that our tutor can test it properly for assessment)

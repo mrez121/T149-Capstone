@@ -1,0 +1,23 @@
+These notes were written by Brandon Farnsworth to condense the feedback video received from Sarah Burland (Industry Partner) on 4/10/26
+Git instructions are rough and need to be improved.
+
+Edit unit (admin toast in general?) should be more central on page - actual design is good though.
+All toasts need to be more centred/obvious to the user on bigger screens.
+
+Need to make the email notification test email clearer for the student that it effects - caused Alice to be unenrollable because the email wasn't included anywhere.
+
+Unexpected token '<' "<!DOCTYPE "... is not valid JSON error when attempting to invite a student from the directory page.
+
+Drag mouse while holding click to select multiple availability slots at once on availability student form - not expected at this stage.
+
+Invite button didn't send with TeamUp ID and didn't show an error at 15:08 - no clear reason as to why - 20:00 mark might indicate that it's because of the JSON error.
+
+Student directory needs to replace the invite button with a greyed-out option or something to indicate that the person is already in a group.
+
+Lock all groups "cannot be undone" message needs to be changed since those groups can be unlocked manually.
+
+Cancel button on edit team page takes you to the edit unit page.
+
+Manage team page really needs to be better on the UI side, especially error handling.
+
+Team size on the group buttons in edit teams page

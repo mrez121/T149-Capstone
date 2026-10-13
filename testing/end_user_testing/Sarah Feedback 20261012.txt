@@ -1,0 +1,13 @@
+instructions are way better! You've got a typo in there that directs the user to go to htpp localhostblahdeblah when it should be http, so might correct that
+
+Next possible issue? I added a class time and then I wanted to see if I could just spam it, and I could:
+image
+
+Which, for bigger units, is probably fine as there might be multiple tutorials running concurrently.
+
+In trying to simulate a copy over of the same students from Phase 1 to Phase 2, I created IFB399 and imported the same csv. Here's a screenshot of what happened:
+image
+
+Then again, the groups are already set for 399, but if there are other units using the same student lists, it might be something to consider.
+
+All of the other updated functions you mentioned are working fine.

@@ -1,0 +1,21 @@
+Student directory page: first arrow doesn't work, not needed.
+
+UX: have to put "n" in front of student number for search to work.
+
+Regarding tutorial: is this purely availability or is there a way to see who has been allocated to a tutorial in student profiles?
+
+UX: colourblind considerations for red/green colourblind people.
+
+Tutorial slots aren't in order on dashboard. Time conversion or display option for either 24 hour or 12am/pm displays would be good.
+
+My Group - invite slots don't show pending invites or who has been sent invites.
+
+No ability to unlock group?
+
+Unit creation - semester: Drop down for semester options?
+
+Timeslots - other options than manual input? How about restricting formatting.
+
+Enrol student - can name and email be prepopulated after typing student number in?
+
+Student enrolment error message: Says student is enrolled in current unit, not the actually unit they're enrolled in.
