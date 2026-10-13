@@ -40,11 +40,22 @@ export default function CsvUploadPage() {
    * @param {*} e - a react event
    */
   function handleFileChange(e) {
+    setError('');
     const file = e.target.files[0];
     if (!file) return;
+    
+    if(!file.type.startsWith("text/")) {
+      setError("Invalid file type. Please upload a .csv file.");
+      return;
+    }
+    const extension = file.name.split('.').pop().toLowerCase();
+    if(extension !== "csv") {
+      setError("Invalid file type. Please upload a .csv file.");
+      return;
+    }
     setFileName(file.name);
     setResults(null);
-    setError('');
+    
 
     const reader = new FileReader();
     reader.onload = (evt) => setCsvText(evt.target.result);
@@ -65,6 +76,13 @@ export default function CsvUploadPage() {
     setLoading(true);
     setError('');
     setResults(null);
+
+    const csvHeader = csvText.split(/\r?\n/)[0];
+    if(csvHeader !== "student_id") {
+      setError('Incorrect CSV format. Column header must be "student_id"');
+      setLoading(false);
+      return;
+    }
 
     const res  = await fetch('/api/admin/units/csv-enrol', {
       method:  'POST',
