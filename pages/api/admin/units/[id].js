@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     );
 
     if (!rows.length) return res.status(404).json({ error: 'Unit not found.' });
-    return res.status(200).json({ unit: rows[0], timeslots: timeslots });
+    return res.status(200).json({ ok: true, unit: rows[0], timeslots: timeslots });
   }
 
   // PUT — update unit name, semester and constraints or unit timeslots

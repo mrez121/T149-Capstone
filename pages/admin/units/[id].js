@@ -45,23 +45,35 @@ export default function EditUnitPage() {
   // Load existing unit data when page loads
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/admin/units/${id}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.unit) {
-          setForm({
-            unit_code: data.unit.unit_code,
-            unit_name: data.unit.unit_name,
-            semester:  data.unit.semester,
-            min_size:  data.unit.min_size ?? 4,
-            max_size:  data.unit.max_size ?? 5,
-            max_new:   data.unit.max_new  ?? 2,
-          });
-          setUnitCode(data.unit.unit_code);
-          setUnitSlots(data.timeslots);
+
+    async function loadUnitData() {
+      try {
+        const res = await fetch(`/api/admin/units/${id}`, {method: 'GET'});
+          if(res.status === 403) {
+            router.push('/');
+          }
+        const data = await res.json();
+        if(!res.ok) {
+          throw new Error(data.error || "Unable to load unit details.");
         }
+        setForm({
+          unit_code: data.unit.unit_code,
+          unit_name: data.unit.unit_name,
+          semester:  data.unit.semester,
+          min_size:  data.unit.min_size ?? 4,
+          max_size:  data.unit.max_size ?? 5,
+          max_new:   data.unit.max_new  ?? 2,
+        });
+        setUnitCode(data.unit.unit_code);
+        setUnitSlots(data.timeslots);
+      } catch (error) {
+        setError(error.message || "Unable to load unit details.");
+        router.push('/admin/units');
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+    loadUnitData();
   }, [id]);
 
   /**
