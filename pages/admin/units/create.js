@@ -52,6 +52,16 @@ export default function CreateUnitPage() {
     setError('');
     setLoading(true);
 
+    const min = Number(form.min_size);
+    const max = Number(form.max_size);
+    const newCount = Number(form.max_new);
+
+    if(min > max || newCount > max) {
+      setError('Min group size cannot be greater than max group size.');
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch('/api/admin/units', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -58,8 +58,14 @@ export default async function handler(req, res) {
     if(submitType === 'details') {
       const { unit_name, semester, min_size, max_size, max_new } = req.body;
       // Validation checks
-      if(max_size < min_size || min_size === 0 || max_size === 0) {
+      if(max_size < min_size || min_size === 0 || max_size === 0 || max_new > max_size) {
         return res.status(400).json({error: 'Invalid team size parameters.'});
+      }
+      if(unit_name === null || unit_name.length > 100) {
+        return res.status(400).json({error: "Invalid unit name."});
+      }
+      if(semester === null || semester.length > 20) {
+        return res.status(400).json({error: "Invalid semester."});
       }
 
       // Check unit exists

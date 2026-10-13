@@ -48,6 +48,18 @@ export default async function handler(req, res) {
     if (!unit_code || !unit_name || !semester) {
       return res.status(400).json({ error: 'unit_code, unit_name and semester are required.' });
     }
+    if(unit_code.length > 20) {
+      return res.status(400).json({ error: 'Unit code invalid.'});
+    }
+    if(unit_name.length > 100) {
+      return res.status(400).json({error: 'Unit name invalid.'});
+    }
+    if(semester.length > 20) {
+      return res.status(400).json({error: 'Semester invalid.'});
+    }
+    if(min_size > max_size || min_size === 0 || max_size === 0 || max_new > max_size) {
+      return res.status(400).json({error: "Invalid team size constraints."});
+    }
 
     // Check unit code is not already taken
     const [existing] = await db.query(
