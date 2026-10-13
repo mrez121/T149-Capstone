@@ -15,9 +15,11 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester name:
- * Date and Time:
- * Test result:
+ * Tester name: Brandon Farnsworth
+ * Date and Time: 13/10/26 11:45
+ * Test result: PASS
+ * All page elements rendered correctly.
+ * All page functions work correctly.
  */
 
 /**
@@ -31,9 +33,12 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:46
+ * Test result: PASS
+ *  GET /api/students/TU-DDC56CEA-B 200 in 12ms (next.js: 3ms, application-code: 9ms)
+    GET /api/students/TU-DDC56CEA-B 304 in 9ms (next.js: 2ms, application-code: 6ms)
+    The page displays the information from the database in the correct form fields and matches what is contained in the database.
  */
 
 /**
@@ -47,9 +52,11 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:48
+ * Test result: PASS
+ * POST /api/auth/logout 200 in 8ms (next.js: 3ms, application-code: 5ms)
+    User logged out of application directly from this page and was returned to the login screen
  */
 
 /**
@@ -63,9 +70,10 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:49
+ * Test result: PASS
+ * All changes to profile form are handled correctly
  */
 
 /**
@@ -79,9 +87,11 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnswort
+ * Date and time: 13/10/26 11:52
+ * Test result: PASS
+ * Saving profile displays a `Profile details updated successfully` notification.
+ * Saving availability displays a `Availability details updated successfully notification.
  */
 
 /**
@@ -95,9 +105,11 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:53
+ * Test result: PASS
+ *  PUT /api/students/TU-DDC56CEA-B 200 in 17ms (next.js: 5ms, application-code: 12ms)
+    Database reflects profile form changes correctly for all fields.
  */
 
 /**
@@ -111,9 +123,11 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:55
+ * Test result: PASS
+ * Clicking a timeslot when it is red makes it green and adds it to the user's availability
+ * Clicking a timeslot when it is green makes it red and removes it from the user's availability.
  */
 
 /**
@@ -127,7 +141,9 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester:
- * Date and time:
- * Test result:
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:56
+ * Test result: PASS
+ *  PUT /api/students/TU-DDC56CEA-B 200 in 30ms (next.js: 4ms, application-code: 26ms)
+ * Clicking save availability button saves the selected timeslots to the database.
  */

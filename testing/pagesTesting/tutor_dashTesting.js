@@ -29,7 +29,7 @@
  * View Units, Create Unit and View Enrolments links were visible.
  * Nested functions will be tested separately below.
  * 
- * FUNCTIONAL TEST #1
+ * FUNCTIONAL TEST #2
  * Tester: Brandon Farnsworth
  * Date and time: 11/10/26 14:12
  * Test results: PASS

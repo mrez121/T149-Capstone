@@ -51,7 +51,7 @@ export default function ManageTeamsPage() {
                 return;
             }
             if(res.status === 403) {
-                router.push('/tutor_dash');
+                router.push('/');
                 return;
             }
             
@@ -114,7 +114,6 @@ export default function ManageTeamsPage() {
      */
     async function getTeams(unitId, unitCode, notify = true, nextFilters = DEFAULT_TEAM_FILTERS) {
         // Keep an older list response from overwriting completed team operations (adding group, removing group).
-        console.log('getTeams triggered');
         if(teamsRequestRef.current || addGroupRequestRef.current !== null || removeGroupRequestRef.current !== null) {
             return;
         }

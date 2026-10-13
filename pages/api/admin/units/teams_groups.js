@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     // Admin authentication check
     const admin = requireAuth(req, res);
     if(!admin) {
-        return;
+        return res.status(401).json({error: "Admin access is required."});
     }
     if(!admin.isAdmin) {
         return res.status(403).json({error: 'Admin access is required.'});

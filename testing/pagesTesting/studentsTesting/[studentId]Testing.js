@@ -140,4 +140,35 @@
  * The current database contained public and locked values for Group 1.
  * The profile displayed these values correctly as "Public" and "Locked".
  * No browser errors were detected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26
+ * Test results: PASS
+ * GET /students/TU-DDC56CEA-B 200 in 26ms (next.js: 8ms, application-code: 18ms)
+   GET /api/students 200 in 37ms (next.js: 3ms, application-code: 34ms)
+   This student's group status correctly displayed 'Private'.
+
+   GET /students/TU-810B3AA2-1 200 in 23ms (next.js: 8ms, application-code: 15ms)
+   GET /api/students 200 in 71ms (next.js: 4ms, application-code: 68ms)
+   This student's group status correctly displayed 'Public'.
+
+ */
+
+/**
+ * @function formatRemoteStatus
+ * Test Criteria:
+ * Does the function convert the database's remote status value from a binary number to a readable label
+ * 
+ * FUNCTIONAL TEST #1
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 11:40
+ * Test results: PASS
+ * GET /students/TU-2891FE01-C 200 in 161ms (next.js: 108ms, application-code: 53ms)
+   GET /api/students 200 in 70ms (next.js: 4ms, application-code: 66ms)
+   Remote status label on this student's profile is correctly displayed as "Remote student"
+   
+   GET /students/TU-DDC56CEA-B 200 in 26ms (next.js: 8ms, application-code: 18ms)
+   GET /api/students 200 in 37ms (next.js: 3ms, application-code: 34ms)
+   Remote status label on this student's profile is correctly displayed as "On campus"
  */

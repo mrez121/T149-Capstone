@@ -28,6 +28,15 @@
  * GET /admin/units/create returned 200.
  * The Create Unit page loaded successfully for an admin account.
  * The live submit action was not performed during this page-load test.
+ * 
+ * FUNCTION TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 13:30
+ * Test result: PASS
+ * Logged in as bfarnsworth
+ * GET /admin/units/create 200 in 71ms (next.js: 39ms, application-code: 33ms)
+   Page renders correctly.
+   Page is accessible without admin access, but form cannot be submitted while the user is not logged in.
  */
 
 /**
@@ -52,6 +61,12 @@
  * Manual browser input was not performed in this pass.
  * Source inspection confirms all form inputs are connected to handleChange
  * through onChange handlers.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 13:37
+ * Test results: PASS
+ * Form fields update correctly with input and store values in state correctly.
  */
 
 /**
@@ -80,4 +95,22 @@
  * The live create action was not submitted in this pass because it creates
  * new unit and constraint records in the database.
  * Page loading was verified separately with GET /admin/units/create returning 200.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 13:39
+ * Test results: FAIL
+ *  POST /api/admin/units 201 in 12ms (next.js: 1.6ms, application-code: 11ms)
+    GET /api/admin/units 200 in 15ms (next.js: 3ms, application-code: 12ms)
+    GET /api/admin/units 304 in 11ms (next.js: 3ms, application-code: 8ms)
+    Function successfully submits provided form information to the database and then redirects the user to the units page.
+
+    No input validation on unit code, unit name, or semester, allowing these fields to exceed database limits.
+    No group constraint validation checks, which allows for minimum group size to be greater than max group size.
+    BUGS FIXED 13/10/26
+
+   POST FIX Test results: PASS
+    Inputs exceeding database type limits now have an error thrown.
+    Unit constraints are now validated to ensure that min_size and max_new cannot exceed max_size.
+    Check is also done to ensure that min_size and max_size do not equal 0.
  */

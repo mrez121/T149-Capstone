@@ -29,6 +29,17 @@
  * GET /admin/units returned 200.
  * The page loaded successfully for an admin account.
  * The local test database currently contains 0 units, so the empty state is expected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester name: Brandon Farnsworth
+ * Date and time: 13/10/26 12:14
+ * Test results: PASS
+ *   GET /admin/units 200 in 62ms (next.js: 51ms, application-code: 11ms)
+    Page loaded successfully for admin account user. 2 units displayed with correct student and group information for each.
+    Delete function deleted a unit successfully.
+    showToast function showed correct toast when called.
+    Edit button navigates to correct page
+    Create unit button navigates to correct page.
  */
 
 /**
@@ -55,6 +66,13 @@
  * GET /api/admin/units returned 200 for the admin session.
  * The API returned 0 units in the current local test database.
  * The page was able to render the empty state without server errors.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 12:17
+ * Test result: PASS
+ *  GET /admin/units 200 in 62ms (next.js: 51ms, application-code: 11ms)
+    Page rendered unit information correctly, with accurate student and group counts for the two units listed.
  */
 
 /**
@@ -78,6 +96,12 @@
  * Test results: NOT RUN
  * Toast display depends on delete success or error paths.
  * Delete was not executed in this pass to avoid changing unit data.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 12:18
+ * Test result: PASS
+ * Toast displayed a success message with the text  `Unit CAB403 deleted` after clicking the delete unit button.
  */
 
 /**
@@ -103,4 +127,12 @@
  * Delete was not executed in this pass because it changes database state.
  * The current local test database also contains 0 units, so there was no unit
  * available for a controlled delete test.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester:  Brandon Farnsworth
+ * Date and time: 13/10/26 12:19
+ * Test results: PASS
+ *  DELETE /api/admin/units/2 200 in 39ms (next.js: 18ms, application-code: 21ms)
+ * Delete unit button successfully displayed a confirmation prompt. Clicking cancel stopped the deletion process.
+ * Clicking confirm deleted the unit from the database and updated the page to reflect the change.
  */

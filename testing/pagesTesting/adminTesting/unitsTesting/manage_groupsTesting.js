@@ -31,7 +31,25 @@
  * The Manage Groups page loaded successfully for an admin session.
  * The local test database was updated with groups.unit_id so the newly merged
  * group management feature could be tested against the current schema.
- */
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:24
+ * Test results: PASS
+ * Logged in with bfarnsworth admin account
+ *  GET /admin/units/manage_groups 200 in 66ms (next.js: 54ms, application-code: 12ms)
+    GET /api/admin/units 304 in 12ms (next.js: 6ms, application-code: 6ms)
+    GET /api/admin/units/groups?unit=1&status=all&size=all&page=1&pageSize=25 200 in 12ms (next.js: 3ms, application-code: 9ms)
+    Page loaded successfully for admin session. All information on page aligns with relevant database entries.
+
+    GET /admin/units/manage_groups 304 in 28ms (next.js: 10ms, application-code: 17ms)
+    GET /api/admin/units 403 in 8ms (next.js: 2ms, application-code: 6ms)
+    Accessing the page with an unauthenticated account returned correct 403 response and redirected the user back to the admin dashboard
+    
+    MINOR BUG FIX 13/10 by Brandon Farnsworth
+    No 401 status error possible on previous API version, which has now been corrected.
+    Both 401 and 403 status codes now redirect back to the login page instead of the admin dashboard.
+*/
 
 /**
  * @function loadUnits
@@ -70,6 +88,16 @@
  * Source inspection confirmed that a saved selection is used only when its
  * unit still appears in the current API response. With multiple units and no
  * valid saved selection, the page asks the admin to select a unit.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:29
+ * Test results: PASS
+ *  GET /admin/units/manage_groups 304 in 128ms (next.js: 106ms, application-code: 22ms)
+    GET /api/admin/units 304 in 56ms (next.js: 25ms, application-code: 31ms)
+    GET /api/admin/units/groups?unit=1&status=all&size=all&page=1&pageSize=25 200 in 12ms (next.js: 3ms, application-code: 8ms)
+    Unit information loaded correctly from database when logged in with an authenticated user. 
+    Page data matches database data.
  */
 
 /**
@@ -94,6 +122,13 @@
  * The group fetch and unlock flows both call showToast after successful API
  * responses.
  * The expected success feedback was available for the page action flow.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:34
+ * Test results: PASS
+ * Notification displays when group data for a unit is fetched.
+ * Notification displays when group is successfully unlocked.
  */
 
 /**
@@ -120,6 +155,14 @@
  * GET /api/admin/units/groups?unit=1 returned 200.
  * The response returned the local test group G-WLTEST, named WL Test Group,
  * with status locked.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:36
+ * Test results: PASS
+ *  GET /api/admin/units/groups?unit=1&status=all&size=all&page=1&pageSize=25 200 in 14ms (next.js: 4ms, application-code: 10ms)
+    Correct response code returned. Correct group data returned. Group statuses correct. Group members correct.
+    All data points reflect current database data.
  */
 
 /**
@@ -186,7 +229,39 @@
  * Each new toast cancels the previous timeout; unmount also clears the timer.
  * The short local request duration did not allow a sustained pending state
  * or network failure to be observed in the browser; these paths were inspected.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:38
+ * Test results: PASS
+ *  POST /api/admin/units/groups?groupId=G-74EB31 200 in 11ms (next.js: 2ms, application-code: 9ms)
+    GET /api/admin/units/groups?unit=1&status=all&size=all&page=1&pageSize=25 200 in 10ms (next.js: 3ms, application-code: 7ms)
+    Unlock group button successfully calls POST request. Page is immediately updated to reflect change in group status.
+    Notification is displayed correctly indicating successful unlock.
  */
+
+/**
+ * @function lockAllGroups
+ * Test criteria:
+ * Does a warning prompt appear to the user requiring confirmation of this operation?
+ * Are all currently made groups locked after using this function?
+ * Is every student not in a group in the unit placed in their own group and is that group locked?
+ * 
+ * FUNCTIONAL TEST #1
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:42
+ * Test results:  PASS
+ * Confirmation window appears when clicking lock all groups button. Clicking cancel prevents the operation
+ * from continuing.
+ *  POST /api/admin/units/lock_all_groups?unit=1&unitCode=IFB398 200 in 1082ms (next.js: 17ms, application-code: 1065ms)
+    Groups 1, 2, and 3 were all locked correctly when this operation occured.
+    All other students in the unit were placed into their own group which was then locked, resulting in
+    a total of 251 locked groups.
+    Students enrolled in a different unit were not affected by this operation.
+    Signing in to user n10000015 confirmed that they were now in Group 6 and the group status was locked.
+ */
+
+
 
 /**
  * @function handleLogout
@@ -208,4 +283,11 @@
  * Test results: NOT RUN
  * Logout was not run during this pass because the focus of the test was the
  * newly merged group management functionality.
+ * 
+ * FUNCTIONAL TEST #2
+ * Tester: Brandon Farnsworth
+ * Date and time: 13/10/26 17:26
+ * Test results: PASS
+ * POST /api/auth/logout 200 in 15ms (next.js: 5ms, application-code: 10ms)
+    Logout function worked correctly and redirected the user back to the login page.
  */
