@@ -64,4 +64,6 @@
  *
  * 13.Failed — PUT returns ok: true, incorrectly indicating that the constraint update succeeded.
  * PUT response: HTTP 200 {"ok":true}
+ * 
+ * ISSUES ABOVE fixed as of 13/10 based on testing conducted in pages/admin/units/[id].
  */

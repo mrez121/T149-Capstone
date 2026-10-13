@@ -87,7 +87,7 @@
  * Test result:
  * 
  * FUNCTIONAL TEST #1
- * Tester: Brandon Farnswort
+ * Tester: Brandon Farnsworth
  * Date and time: 13/10/26 11:52
  * Test result: PASS
  * Saving profile displays a `Profile details updated successfully` notification.
