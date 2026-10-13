@@ -1,4 +1,4 @@
-// pages/admin/units/[id]/unernol.js
+// pages/admin/units/[id]/unenrol.js
 // Unenrol a student in the specified unit
 
 import {useState} from 'react';

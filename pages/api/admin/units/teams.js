@@ -92,6 +92,12 @@ export default async function handler(req, res) {
         if(!team_id || !name) {
             return res.status(400).json({error: 'Team ID and Team Name are required.'});
         }
+        if(team_id.length > 20) {
+            return res.status(400).json({error: "Invalid Team ID."});
+        }
+        if(name.length > 100) {
+            return res.status(400).json({error: "Invalid Team Name."});
+        }
 
         // Check unit exists
         const [unitCheck] = await db.query('SELECT * FROM units WHERE id = ? AND unit_code = ?', [unit, unitCode]);
