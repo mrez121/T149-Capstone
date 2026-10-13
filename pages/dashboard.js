@@ -1034,13 +1034,23 @@ export default function Dashboard() {
                       Once created, invite teammates by their
                       TeamUp ID from your group panel.
                     </p>
-
-                    <button
+                    {student ? (
+                      <button
                       className="btn btn-blue"
                       type="submit"
                     >
                       Create group
                     </button>
+                    ) : (
+                      <button
+                      className="abtn abtn-disabled"
+                      type="submit"
+                      disabled="true"
+                    >
+                      Create group
+                    </button>
+                    )}  
+                    
                   </div>
                 </form>
               </div>

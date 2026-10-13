@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     SELECT unit_id FROM unit_enrolments WHERE student_id = ?`,
     [student.studentId]
   );
-  if(!studentUnit[0].unit_id) {
+  if(!studentUnit.length) {
     return res.status(400).json({error: 'Student is not enrolled in a unit.'});
   }
 
@@ -58,6 +58,13 @@ export default async function handler(req, res) {
 
   // POST — create group for the current user's unit (can be public or private)
   if (req.method === 'POST') {
+    const [studentUnit] = await db.query(`
+      SELECT unit_id FROM unit_enrolments WHERE student_id = ?`,
+      [student.studentId]
+    );
+    if(!studentUnit.length) {
+      return res.status(400).json({error: 'Student is not enrolled in a unit.'});
+    }
     const [existing] = await db.query(
       'SELECT group_id FROM group_members WHERE student_id = ?',
       [student.studentId]
