@@ -31,6 +31,10 @@ export default async function handler(req, res) {
         const teamId = req.query.teamId;
         const unit = req.query.unit;
 
+        if(!teamId || !unit) {
+            return res.status(400).json({error: "Team details required."});
+        }
+
         const [rows] = await db.query(
             `SELECT * FROM teams WHERE team_id = ? AND unit_id = ?`,
             [teamId, unit]

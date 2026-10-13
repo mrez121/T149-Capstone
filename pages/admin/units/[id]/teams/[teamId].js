@@ -16,8 +16,6 @@ import AdminToast from "../../../../../components/AdminToast";
 export default function EditTeamPage() {
     const router = useRouter();
     const {id, teamId} = router.query;
-    const searchParams = useSearchParams();
-    const teamName = searchParams.get('name');
 
     const [form, setForm] = useState({
         team_id: '',
@@ -34,17 +32,28 @@ export default function EditTeamPage() {
         if(!id || !teamId) {
             return;
         }
-        fetch(`/api/admin/units/teams_team?teamId=${teamId}&unit=${id}`, {method: 'GET'})
-            .then(r => r.json())
-            .then(data => {
-                if(data.team) {
-                    setForm({
-                        team_id: data.team.team_id,
-                        name: data.team.name
-                    });
+        async function loadTeamData() {
+            try {
+                const res = await fetch(`/api/admin/units/teams_team?teamId=${teamId}&unit=${id}`, {method: 'GET'})
+                if(res.status === 403) {
+                    router.push('/');
                 }
+                const data = await res.json();
+                if(!res.ok) {
+                    throw new Error(data.error || "Unable to load team details.");
+                }
+                setForm({
+                    team_id: data.team.team_id,
+                    name: data.team.name
+                });
+            } catch (error) {
+                setError(error.message || "Unable to load team details.");
+                router.push(`/admin/units/manage_teams`);
+            } finally {
                 setLoading(false);
-            });
+            }
+        }
+        loadTeamData();
     }, [teamId]);
 
     /**

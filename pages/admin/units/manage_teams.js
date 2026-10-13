@@ -311,7 +311,7 @@ export default function ManageTeamsPage() {
                                                         Add/Remove Groups
                                                     </Link>
                                                     <Link
-                                                        href={`/admin/units/${selectedUnitId}/teams/${e.team_id}?name=${e.name}`}
+                                                        href={`/admin/units/${selectedUnitId}/teams/${e.team_id}`}
                                                         className="abtn abtn-ghost">
                                                         {`Edit ${e.name}`}
                                                     </Link>
