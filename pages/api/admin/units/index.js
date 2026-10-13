@@ -19,7 +19,7 @@ export default async function handler(req, res) {
 
   // Check user is logged in and is an admin
   const student = requireAuth(req, res);
-  if (!student) return;
+  if (!student) return res.status(401).json({error: "Valid login credentials required."});
   if (!student.isAdmin) return res.status(403).json({ error: 'Admin access required.' });
 
   const db = getDb();

@@ -61,7 +61,7 @@ export default function ManageGroupsPage() {
                 return;
             }
             if(res.status === 403) {
-                router.push('/tutor_dash');
+                router.push('/');
                 return;
             }
             const data = await res.json();
