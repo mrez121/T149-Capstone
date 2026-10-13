@@ -42,6 +42,8 @@ export default function EditUnitPage() {
   const [error,   setError]   = useState('');
   const [toast,   setToast]   = useState(null);
 
+  const validDays = ["MON", "TUE", "WED", "THU", "FRI"];
+
   // Load existing unit data when page loads
   useEffect(() => {
     if (!id) return;
@@ -170,6 +172,10 @@ export default function EditUnitPage() {
     const [day, hour, min] = parts;
     // Take first 3 characters of day string and format to uppercase
     const formattedDay = day.substring(0, 3).toUpperCase();
+    const dayMatch = validDays.includes(formattedDay);
+    if(!dayMatch) {
+      return null;
+    }
     // Parse the hour as a number, check if it's valid in 24 hour format, then store as a string
     const hourNum = parseInt(hour, 10);
     if(isNaN(hourNum) || hourNum < 0 || hourNum > 23) {
